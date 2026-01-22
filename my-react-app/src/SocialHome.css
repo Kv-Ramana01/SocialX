@@ -1,0 +1,64 @@
+/* src/SocialHome.css */
+
+
+.home-bg {
+  background-color: #000000;
+  min-height: 100vh;
+}
+
+.navbar-custom {
+  background-color: #0f0f0f !important;
+  border-bottom: 1px solid #333;
+}
+
+.brand-text {
+  background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+
+.post-card {
+  background-color: #121212 !important; /* Material Dark */
+  border: 1px solid #2a2a2a !important;
+  color: #e0e0e0;
+}
+
+
+.input-post {
+  background-color: #1f1f1f !important;
+  border: 1px solid #333 !important;
+  color: white !important;
+}
+
+.input-post::placeholder {
+  color: #888 !important;
+}
+
+.input-post:focus {
+  background-color: #252525 !important;
+  border-color: #6c5ce7 !important;
+  box-shadow: none !important; 
+}
+
+.btn-primary-custom {
+  background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+  border: none;
+  color: white;
+  font-weight: 600;
+}
+
+.btn-primary-custom:hover {
+  background: linear-gradient(45deg, #5b4cc4, #8e84f5);
+  color: white;
+}
+
+.icon-btn {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.icon-btn:hover {
+  color: #6c5ce7 !important; /* Glow purple on hover */
+}

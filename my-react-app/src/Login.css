@@ -1,0 +1,48 @@
+
+.login-dark {
+  background-color: #000000;
+  
+  background-image: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%);
+}
+
+
+.login-card {
+  background-color: #121212 !important; /* Material Dark Grey */
+  border: 1px solid #333 !important;
+  width: 24rem;
+  border-radius: 15px !important;
+}
+
+
+.input-dark {
+  background-color: #1f1f1f !important;
+  border: 1px solid #333 !important;
+  color: white !important; 
+  transition: 0.3s ease;
+}
+
+.input-dark::placeholder {
+  color: #666 !important;
+}
+
+.input-dark:focus {
+  background-color: #252525 !important;
+  border-color: #6c5ce7 !important; /* Cool purple glow */
+  box-shadow: 0 0 0 0.25rem rgba(108, 92, 231, 0.25) !important;
+}
+
+.btn-login {
+  background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+  border: none;
+  color: white;
+  font-weight: bold;
+  letter-spacing: 1px;
+  transition: transform 0.2s ease;
+}
+
+.btn-login:hover {
+  transform: translateY(-2px); 
+  background: linear-gradient(45deg, #5b4cc4, #8e84f5);
+  color: white;
+  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+}
