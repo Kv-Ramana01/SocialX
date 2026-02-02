@@ -1,12 +1,21 @@
 
 import React from 'react';
-import './SocialHome.css'; 
+import { NavLink, useNavigate } from "react-router-dom";
+
+import '../SocialHome.css'; 
 
 function SocialHome({ onLogout }) {
+
+   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    onLogout();
+    navigate("/");
+  };
   return (
     <div className="home-bg">
       
-      {/* { Navbar } */}
+      {/* { Navbar }
       <nav className="navbar navbar-expand-lg navbar-custom sticky-top">
         <div className="container">
           <span className="navbar-brand brand-text fs-3">SocialX</span>
@@ -14,9 +23,40 @@ function SocialHome({ onLogout }) {
             Log Out
           </button>
         </div>
-      </nav>
+      </nav> */}
 
-      /*Main Layout*/
+      {/* ✅ Navbar with Router Tabs */}
+      
+      <nav className="navbar-modern">
+  <div className="nav-container">
+
+    {/* Logo */}
+    <h2 className="nav-logo">SocialX</h2>
+
+    {/* Nav Tabs */}
+    <div className="nav-links">
+      <NavLink to="/home" className="nav-item">
+        Home
+      </NavLink>
+
+      <NavLink to="/friends" className="nav-item">
+        Friends
+      </NavLink>
+
+      <NavLink to="/chat" className="nav-item">
+        Chat
+      </NavLink>
+    </div>
+
+    {/* Logout Button */}
+    <button className="logout-btn" onClick={handleLogout}>
+      Logout
+    </button>
+  </div>
+</nav>
+
+
+      
       <div className="container mt-4">
         <div className="row justify-content-center">
           

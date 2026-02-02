@@ -1,0 +1,18 @@
+.navbar-custom {
+  background-color: #121212;
+}
+
+.menu-links {
+  display: flex;
+  gap: 20px;
+}
+
+.menu-item {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.menu-item:hover {
+  color: #a29bfe;
+}

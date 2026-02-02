@@ -62,3 +62,103 @@
 .icon-btn:hover {
   color: #6c5ce7 !important; /* Glow purple on hover */
 }
+
+
+/* ✅ Modern Navbar */
+.navbar-modern {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  padding: 14px 0;
+  background: rgba(18, 18, 18, 0.75);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 999;
+}
+
+.nav-container {
+  width: 90%;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Logo */
+.nav-logo {
+  font-size: 26px;
+  font-weight: 700;
+  color: #a29bfe;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.nav-logo:hover {
+  color: #6c5ce7;
+  transform: scale(1.05);
+}
+
+/* Links */
+.nav-links {
+  display: flex;
+  gap: 35px;
+}
+
+.nav-item {
+  position: relative;
+  font-size: 16px;
+  font-weight: 500;
+  color: white;
+  text-decoration: none;
+  padding: 6px 0;
+  transition: 0.3s;
+}
+
+/* Hover glow */
+.nav-item:hover {
+  color: #a29bfe;
+}
+
+/* Underline animation */
+.nav-item::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, #6c5ce7, #a29bfe);
+  transition: width 0.3s ease;
+}
+
+.nav-item:hover::after {
+  width: 100%;
+}
+
+/* ✅ Active Tab Highlight */
+.nav-item.active {
+  color: #a29bfe;
+  font-weight: 700;
+}
+
+.nav-item.active::after {
+  width: 100%;
+}
+
+/* Logout button */
+.logout-btn {
+  border: none;
+  padding: 8px 18px;
+  border-radius: 25px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(108, 92, 231, 0.5);
+}

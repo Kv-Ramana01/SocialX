@@ -1,13 +1,18 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
-function Login({ onLogin, onForgot, onSignup }) {
+function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const navigate = useNavigate(); // ✅ Router navigation
+
   const handleLogin = (e) => {
     e.preventDefault();
-    onLogin(email, password); // send values to parent
+
+    // Send values to App.jsx for validation
+    onLogin(email, password);
   };
 
   return (
@@ -19,6 +24,7 @@ function Login({ onLogin, onForgot, onSignup }) {
           <h5 className="text-center text-secondary mb-4">Welcome Back</h5>
 
           <form onSubmit={handleLogin}>
+            {/* Email */}
             <div className="mb-3">
               <label className="form-label text-light">Email address</label>
               <input
@@ -31,6 +37,7 @@ function Login({ onLogin, onForgot, onSignup }) {
               />
             </div>
 
+            {/* Password */}
             <div className="mb-2">
               <label className="form-label text-light">Password</label>
               <input
@@ -43,26 +50,30 @@ function Login({ onLogin, onForgot, onSignup }) {
               />
             </div>
 
+            {/* ✅ Forgot Password Link */}
             <div className="text-end mb-3">
               <button
                 type="button"
                 className="btn btn-link p-0 text-decoration-none"
-                onClick={onForgot}
+                onClick={() => navigate("/forgot")}
               >
                 Forgot password?
               </button>
             </div>
 
+            {/* Login Button */}
             <button type="submit" className="btn btn-login w-100 py-2">
               Log In
             </button>
           </form>
 
+          {/* ✅ Signup Link */}
           <p className="text-center text-secondary mt-3 mb-0">
             Don’t have an account?{" "}
             <button
+              type="button"
               className="btn btn-link p-0 text-decoration-none"
-              onClick={onSignup}
+              onClick={() => navigate("/signup")}
             >
               Sign up
             </button>
