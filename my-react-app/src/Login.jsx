@@ -6,12 +6,12 @@ function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const navigate = useNavigate(); // ✅ Router navigation
+  const navigate = useNavigate(); 
 
   const handleLogin = (e) => {
     e.preventDefault();
 
-    // Send values to App.jsx for validation
+    // Sending values to App.jsx for validation
     onLogin(email, password);
   };
 
