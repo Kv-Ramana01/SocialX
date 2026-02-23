@@ -8,6 +8,8 @@ import ForgotPassword from "./ForgotPassword";
 import SocialHome from "./pages/SocialHome";
 import Friends from "./pages/Friends";
 import Chat from "./pages/Chat";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -55,6 +57,16 @@ function App() {
       <Route
         path="/chat"
         element={isLoggedIn ? <Chat /> : <Navigate to="/" />}
+      />
+
+      <Route
+        path="/profile"
+        element={isLoggedIn ? <Profile /> : <Navigate to="/" />}
+      />
+
+       <Route
+        path="/Settings"
+        element={isLoggedIn ? <Settings /> : <Navigate to="/" />}
       />
 
       {/* Fallback */}

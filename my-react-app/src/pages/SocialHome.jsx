@@ -1,28 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { FaUser } from "react-icons/fa";
 import "../SocialHome.css";
 
 function SocialHome({ onLogout }) {
   const navigate = useNavigate();
 
-  const handleCreatePost = () => {
-    if (newPost.trim() === "") return;
+  /* ================= POSTS ================= */
 
-    const post = {
-      id: Date.now(), // unique id
-      author: "KV Ramana",
-      initials: "KV",
-      time: "just now",
-      content: newPost,
-      likes: 0,
-      liked: false,
-    };
-
-    setPostsData((prevPosts) => [post, ...prevPosts]);
-    setNewPost(""); // clear input
-  };
-
-  /*POSTS STATE*/
   const [postsData, setPostsData] = useState([
     {
       id: 1,
@@ -45,16 +30,28 @@ function SocialHome({ onLogout }) {
     },
   ]);
 
-  /* ===== LOGOUT ===== */
-  const handleLogout = () => {
-    onLogout();
-    navigate("/");
+  const [newPost, setNewPost] = useState("");
+
+  const handleCreatePost = () => {
+    if (!newPost.trim()) return;
+
+    const post = {
+      id: Date.now(),
+      author: "KV Ramana",
+      initials: "KV",
+      time: "Just now",
+      content: newPost,
+      likes: 0,
+      liked: false,
+    };
+
+    setPostsData([post, ...postsData]);
+    setNewPost("");
   };
 
-  /* ===== LIKE HANDLER ===== */
   const handleLike = (postId) => {
-    setPostsData((prevPosts) =>
-      prevPosts.map((post) =>
+    setPostsData((prev) =>
+      prev.map((post) =>
         post.id === postId
           ? {
               ...post,
@@ -66,32 +63,28 @@ function SocialHome({ onLogout }) {
     );
   };
 
-  const [newPost, setNewPost] = useState("");
+  const handleLogout = () => {
+    onLogout();
+    navigate("/");
+  };
 
-  // SEARCH STATE
+  /* ================= SEARCH ================= */
+
   const [search, setSearch] = useState("");
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef(null);
-  // DUMMY USERS
+
   const users = [
     { id: 1, name: "John Doe", initials: "JD" },
     { id: 2, name: "Jane Smith", initials: "JS" },
     { id: 3, name: "Alex Johnson", initials: "AJ" },
     { id: 4, name: "Chris Evans", initials: "CE" },
   ];
-  // DUMMY POSTS
-  const posts = [
-    { id: 1, content: "Just switched to dark mode on SocialX 🔥" },
-    { id: 2, content: "Working on MERN stack today 💻" },
-    { id: 3, content: "React Router is finally making sense!" },
-  ];
+
   const filteredUsers = users.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()),
   );
-  const filteredPosts = posts.filter((p) =>
-    p.content.toLowerCase().includes(search.toLowerCase()),
-  );
-  // CLOSE SEARCH WHEN CLICKING OUTSIDE
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
@@ -101,9 +94,11 @@ function SocialHome({ onLogout }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
   return (
     <div className="home-bg">
-      {/* ===== NAVBAR ===== */}
+      {/* ================= NAVBAR ================= */}
+
       <nav className="navbar-modern">
         <div className="nav-container">
           <h2 className="nav-logo">SocialX</h2>
@@ -120,112 +115,98 @@ function SocialHome({ onLogout }) {
             </NavLink>
           </div>
 
-          {/* SEARCH */}
           <div className="search-box" ref={searchRef}>
-            {" "}
             <input
               type="text"
-              className="form-control search-input"
-              placeholder="Search users or posts..."
+              className="search-input"
+              placeholder="Search users..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setShowResults(true);
               }}
-            />{" "}
+            />
+
             {search && (
               <span className="search-clear" onClick={() => setSearch("")}>
-                {" "}
-                ✕{" "}
+                ✕
               </span>
-            )}{" "}
+            )}
+
             {showResults && search && (
               <div className="search-results">
-                {" "}
-                <div className="search-section">Users</div>{" "}
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
                     <div key={user.id} className="search-item">
-                      {" "}
-                      <div className="search-avatar">{user.initials}</div>{" "}
-                      <span>{user.name}</span>{" "}
+                      <div className="search-avatar">{user.initials}</div>
+                      {user.name}
                     </div>
                   ))
                 ) : (
                   <div className="search-item muted">No users found</div>
-                )}{" "}
-                <div className="search-section">Posts</div>{" "}
-                {filteredPosts.length > 0 ? (
-                  filteredPosts.map((post) => (
-                    <div key={post.id} className="search-item post">
-                      {" "}
-                      {post.content}{" "}
-                    </div>
-                  ))
-                ) : (
-                  <div className="search-item muted">No posts found</div>
-                )}{" "}
+                )}
               </div>
-            )}{" "}
+            )}
           </div>
 
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
+          <div className="nav-right">
+            <NavLink to="/profile" className="profile-icon">
+              <FaUser />
+            </NavLink>
+
+            <button className="logout-btn" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         </div>
       </nav>
 
-      {/* ===== LAYOUT ===== */}
+      {/* ================= LAYOUT ================= */}
+
       <div className="container mt-4">
-        <div className="row">
+        <div className="row align-items-start">
           {/* LEFT SIDEBAR */}
           <div className="col-lg-3 d-none d-lg-block">
-            {" "}
             <div className="side-card">
-              {" "}
               <div className="profile-box">
-                {" "}
-                <div className="profile-avatar">KV</div>{" "}
-                <h6 className="text-white mt-2">KV Ramana</h6>{" "}
-                <small className="text">@kvramana</small>{" "}
-              </div>{" "}
-              <hr /> <div className="side-link">🏠 Home</div>{" "}
-              <div className="side-link">👥 Friends</div>{" "}
-              <div className="side-link">💬 Chat</div>{" "}
-              <div className="side-link">⭐ Saved</div>{" "}
-              <div className="side-link">⚙ Settings</div>{" "}
-            </div>{" "}
+                <div className="profile-avatar">KV</div>
+                <h6 className="text-white mt-2">KV Ramana</h6>
+                <small className="text-muted">@kvramana</small>
+              </div>
+
+              <hr />
+
+              <div className="side-link">🏠 Home</div>
+              <div className="side-link">👥 Friends</div>
+              <div className="side-link">💬 Chat</div>
+              <div className="side-link">⭐ Saved</div>
+              <div className="side-link">⚙ Settings</div>
+            </div>
           </div>
 
           {/* MAIN FEED */}
-
-          <div className="col-lg-6 col-md-8">
+          <div className="col-lg-6 col-md-8 mx-auto">
             {/* CREATE POST */}
-            <div className="card post-card mb-4">
+            <div className="card post-card mb-3">
               <div className="card-body">
-                <div className="d-flex align-items-center mb-3">
-                  <div
-                    className="profile-avatar me-3"
-                    style={{ width: "45px", height: "45px", fontSize: "14px" }}
-                  >
-                    KV
-                  </div>
+               <div className="d-flex align-items-center mb-3 w-100">
+
+                  <div className="profile-avatar-sm me-3">KV</div>
 
                   <input
-                    type="text"
-                    className="form-control input-post"
+  type="text"
+  className="input-post form-control flex-grow-1"
+
                     placeholder="What's happening?"
                     value={newPost}
                     onChange={(e) => setNewPost(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleCreatePost();
-                    }}
+                    onKeyDown={(e) => e.key === "Enter" && handleCreatePost()}
                   />
                 </div>
 
                 <div className="text-end">
                   <button
-                    className="btn btn-primary-custom px-4 rounded-pill"
+                    className="btn btn-primary-custom"
                     onClick={handleCreatePost}
                   >
                     Post
@@ -233,23 +214,42 @@ function SocialHome({ onLogout }) {
                 </div>
               </div>
             </div>
+
+            {/* POSTS */}
             {postsData.map((post) => (
-              <div key={post.id} className="card post-card mb-3">
+              <div key={post.id} className="card post-card mb-4">
                 <div className="card-body">
-                  <h6 className="text-white">{post.author}</h6>
-                  <p className="text-light">{post.content}</p>
+                  {/* Header */}
+                  <div className="d-flex align-items-center mb-3">
+                    <div className="profile-avatar-sm me-3">
+                      {post.initials}
+                    </div>
 
-                  <hr />
+                    <div className="flex-grow-1">
+                      <h6 className="mb-0 text-white fw-semibold">
+                        {post.author}
+                      </h6>
+                      <small className="text-muted">{post.time}</small>
+                    </div>
+                  </div>
 
-                  <div className="post-actions d-flex justify-content-around">
-                    <span
+                  {/* Content */}
+                  <div className="post-content mb-3">{post.content}</div>
+
+                  <hr className="post-divider" />
+
+                  {/* Actions */}
+                  <div className="post-actions d-flex justify-content-between px-3">
+                    <div
                       className={`action-btn ${post.liked ? "liked" : ""}`}
                       onClick={() => handleLike(post.id)}
                     >
                       ❤️ {post.likes}
-                    </span>
-                    <span className="action-btn">💬 Comment</span>
-                    <span className="action-btn">🔁 Share</span>
+                    </div>
+
+                    <div className="action-btn">💬 Comment</div>
+
+                    <div className="action-btn">🔁 Share</div>
                   </div>
                 </div>
               </div>
@@ -258,25 +258,24 @@ function SocialHome({ onLogout }) {
 
           {/* RIGHT SIDEBAR */}
           <div className="col-lg-3 d-none d-lg-block">
-            {" "}
             <div className="side-card">
-              {" "}
-              <h6 className="text-white mb-3">🔥 Trending</h6>{" "}
-              <div className="trend-item">#ReactJS</div>{" "}
-              <div className="trend-item">#MERNStack</div>{" "}
-              <div className="trend-item">#WebDev</div> <hr />{" "}
-              <h6 className="text-white mb-2">👤 Suggestions</h6>{" "}
+              <h6 className="text-white mb-3">🔥 Trending</h6>
+              <div className="trend-item">#ReactJS</div>
+              <div className="trend-item">#MERNStack</div>
+              <div className="trend-item">#WebDev</div>
+
+              <hr />
+
+              <h6 className="text-white mb-2">👤 Suggestions</h6>
               <div className="suggest-user">
-                {" "}
-                <div className="avatar-sm">AJ</div>{" "}
-                <span>Alex Johnson</span>{" "}
-              </div>{" "}
+                <div className="avatar-sm">AJ</div>
+                Alex Johnson
+              </div>
               <div className="suggest-user">
-                {" "}
-                <div className="avatar-sm green">JS</div>{" "}
-                <span>Jane Smith</span>{" "}
-              </div>{" "}
-            </div>{" "}
+                <div className="avatar-sm green">JS</div>
+                Jane Smith
+              </div>
+            </div>
           </div>
         </div>
       </div>

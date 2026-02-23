@@ -1,0 +1,66 @@
+.settings-page {
+  min-height: 100vh;
+  padding: 20px;
+  background: #0e0e0e; 
+  font-family: Arial;
+}
+
+/* Header with Back Button */
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.settings-header h2 {
+  font-size: 26px;
+  font-weight: bold;
+  color: #6a4bff;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color:beige
+}
+
+/* Search Bar */
+.settings-search input {
+  width: 100%;
+  padding: 12px;
+  margin: 20px 0;
+  border-radius: 12px;
+  border: 1px solid #cdcdee;
+  background: rgb(15, 13, 13);
+  font-size: 15px;
+  color: #eee;
+}
+
+/* Settings List */
+.settings-list {
+  background: rgb(12, 9, 9);
+  padding: 10px 15px;
+  border-radius: 15px;
+  box-shadow: 0px 0px 10px rgba(0,0,0,0.08);
+  color:#eee
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 5px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  font-size: 17px;
+}
+
+.settings-item:last-child {
+  border-bottom: none;
+}
+
+.settings-item:hover {
+  background:rgb(27, 26, 26);
+  border-radius: 10px;
+}
