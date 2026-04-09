@@ -1,18 +1,29 @@
+// src/Login.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
 function Login({ onLogin }) {
-  const [email, setEmail] = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
 
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    // Sending values to App.jsx for validation
-    onLogin(email, password);
+    try {
+      await onLogin(email, password); // App.jsx calls authAPI.login()
+      // Navigation handled by App.jsx redirect
+    } catch (err) {
+      setError(err.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -23,8 +34,13 @@ function Login({ onLogin }) {
           <h2 className="text-center mb-4 text-white fw-bold">SocialX</h2>
           <h5 className="text-center text-secondary mb-4">Welcome Back</h5>
 
+          {error && (
+            <div className="alert alert-danger py-2 text-center" style={{ fontSize: 14 }}>
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleLogin}>
-            {/* Email */}
             <div className="mb-3">
               <label className="form-label text-light">Email address</label>
               <input
@@ -34,10 +50,10 @@ function Login({ onLogin }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
 
-            {/* Password */}
             <div className="mb-2">
               <label className="form-label text-light">Password</label>
               <input
@@ -47,10 +63,10 @@ function Login({ onLogin }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
 
-            {/* ✅ Forgot Password Link */}
             <div className="text-end mb-3">
               <button
                 type="button"
@@ -61,15 +77,17 @@ function Login({ onLogin }) {
               </button>
             </div>
 
-            {/* Login Button */}
-            <button type="submit" className="btn btn-login w-100 py-2">
-              Log In
+            <button
+              type="submit"
+              className="btn btn-login w-100 py-2"
+              disabled={loading}
+            >
+              {loading ? "Logging in…" : "Log In"}
             </button>
           </form>
 
-          {/* ✅ Signup Link */}
           <p className="text-center text-secondary mt-3 mb-0">
-            Don’t have an account?{" "}
+            Don't have an account?{" "}
             <button
               type="button"
               className="btn btn-link p-0 text-decoration-none"

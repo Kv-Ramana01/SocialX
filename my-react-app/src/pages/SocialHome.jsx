@@ -1,90 +1,50 @@
-import React, { useState, useRef, useEffect } from "react";
+// src/pages/SocialHome.jsx
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FaUser } from "react-icons/fa";
+import { postsAPI, usersAPI } from "../services/api";
 import "../SocialHome.css";
 
-function SocialHome({ onLogout }) {
+function SocialHome({ onLogout, currentUser }) {
   const navigate = useNavigate();
 
-  /* ================= POSTS ================= */
+  // ── Posts state ─────────────────────────────────────────────────────────────
+  const [posts,      setPosts]      = useState([]);
+  const [newPost,    setNewPost]    = useState("");
+  const [postError,  setPostError]  = useState("");
+  const [feedLoading, setFeedLoading] = useState(true);
 
-  const [postsData, setPostsData] = useState([
-    {
-      id: 1,
-      author: "John Doe",
-      initials: "JD",
-      time: "2h",
-      content: "Just switched to dark mode on the new SocialX dashboard 🔥",
-      likes: 12,
-      liked: false,
-    },
-    {
-      id: 2,
-      author: "Jane Smith",
-      initials: "JS",
-      time: "5h",
-      content:
-        "Working on the backend connectivity today. MERN stack is fun but debugging requires patience 💻",
-      likes: 8,
-      liked: false,
-    },
-  ]);
-
-  const [newPost, setNewPost] = useState("");
-
-  const handleCreatePost = () => {
-    if (!newPost.trim()) return;
-
-    const post = {
-      id: Date.now(),
-      author: "KV Ramana",
-      initials: "KV",
-      time: "Just now",
-      content: newPost,
-      likes: 0,
-      liked: false,
-    };
-
-    setPostsData([post, ...postsData]);
-    setNewPost("");
-  };
-
-  const handleLike = (postId) => {
-    setPostsData((prev) =>
-      prev.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              liked: !post.liked,
-              likes: post.liked ? post.likes - 1 : post.likes + 1,
-            }
-          : post,
-      ),
-    );
-  };
-
-  const handleLogout = () => {
-    onLogout();
-    navigate("/");
-  };
-
-  /* ================= SEARCH ================= */
-
-  const [search, setSearch] = useState("");
+  // ── Search state ─────────────────────────────────────────────────────────────
+  const [search,      setSearch]      = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
   const searchRef = useRef(null);
 
-  const users = [
-    { id: 1, name: "John Doe", initials: "JD" },
-    { id: 2, name: "Jane Smith", initials: "JS" },
-    { id: 3, name: "Alex Johnson", initials: "AJ" },
-    { id: 4, name: "Chris Evans", initials: "CE" },
-  ];
+  // ── Load feed on mount ───────────────────────────────────────────────────────
+  useEffect(() => {
+    postsAPI
+      .getFeed()
+      .then((data) => setPosts(data.posts))
+      .catch((err) => console.error("Feed error:", err))
+      .finally(() => setFeedLoading(false));
+  }, []);
 
-  const filteredUsers = users.filter((u) =>
-    u.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  // ── Search users ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!search.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      usersAPI
+        .search(search)
+        .then((data) => setSearchResults(data.users))
+        .catch(() => setSearchResults([]));
+    }, 300); // debounce
+    return () => clearTimeout(timer);
+  }, [search]);
 
+  // Close search on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
@@ -95,51 +55,110 @@ function SocialHome({ onLogout }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ── Create post ──────────────────────────────────────────────────────────────
+  const handleCreatePost = async () => {
+    if (!newPost.trim()) return;
+    setPostError("");
+    try {
+      const data = await postsAPI.createPost(newPost.trim());
+      setPosts((prev) => [data.post, ...prev]);
+      setNewPost("");
+    } catch (err) {
+      setPostError(err.message);
+    }
+  };
+
+  // ── Like / unlike ────────────────────────────────────────────────────────────
+  const handleLike = useCallback(async (postId) => {
+    try {
+      const data = await postsAPI.toggleLike(postId);
+      setPosts((prev) =>
+        prev.map((p) =>
+          p._id === postId
+            ? { ...p, likes: data.post.likes, liked: data.liked }
+            : p
+        )
+      );
+    } catch (err) {
+      console.error("Like error:", err);
+    }
+  }, []);
+
+  // ── Logout ───────────────────────────────────────────────────────────────────
+  const handleLogout = async () => {
+    await onLogout();
+    navigate("/");
+  };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  const getInitials = (user) => {
+    if (!user) return "?";
+    const name = user.name || user.username || "";
+    return name
+      .split(" ")
+      .map((p) => p[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const isLiked = (post) => {
+    if (!currentUser) return false;
+    return post.likes?.some(
+      (id) => (typeof id === "object" ? id._id : id) === currentUser._id
+    );
+  };
+
+  const timeAgo = (dateStr) => {
+    const diff = Date.now() - new Date(dateStr);
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1)  return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)  return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const myInitials  = getInitials(currentUser);
+  const myUsername  = currentUser?.username || "user";
+
   return (
     <div className="home-bg">
-      {/* ================= NAVBAR ================= */}
-
+      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
       <nav className="navbar-modern">
         <div className="nav-container">
           <h2 className="nav-logo">SocialX</h2>
 
           <div className="nav-links">
-            <NavLink to="/home" className="nav-item">
-              Home
-            </NavLink>
-            <NavLink to="/friends" className="nav-item">
-              Friends
-            </NavLink>
-            <NavLink to="/chat" className="nav-item">
-              Chat
-            </NavLink>
+            <NavLink to="/home"    className="nav-item">Home</NavLink>
+            <NavLink to="/friends" className="nav-item">Friends</NavLink>
+            <NavLink to="/chat"    className="nav-item">Chat</NavLink>
           </div>
 
+          {/* Search */}
           <div className="search-box" ref={searchRef}>
             <input
               type="text"
               className="search-input"
-              placeholder="Search users..."
+              placeholder="Search users…"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setShowResults(true);
-              }}
+              onChange={(e) => { setSearch(e.target.value); setShowResults(true); }}
             />
-
             {search && (
-              <span className="search-clear" onClick={() => setSearch("")}>
+              <span className="search-clear" onClick={() => { setSearch(""); setSearchResults([]); }}>
                 ✕
               </span>
             )}
-
             {showResults && search && (
               <div className="search-results">
-                {filteredUsers.length > 0 ? (
-                  filteredUsers.map((user) => (
-                    <div key={user.id} className="search-item">
-                      <div className="search-avatar">{user.initials}</div>
-                      {user.name}
+                {searchResults.length > 0 ? (
+                  searchResults.map((u) => (
+                    <div key={u._id} className="search-item">
+                      <div className="search-avatar">{getInitials(u)}</div>
+                      <div>
+                        <div>{u.name || u.username}</div>
+                        <small style={{ color: "#aaa" }}>@{u.username}</small>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -153,7 +172,6 @@ function SocialHome({ onLogout }) {
             <NavLink to="/profile" className="profile-icon">
               <FaUser />
             </NavLink>
-
             <button className="logout-btn" onClick={handleLogout}>
               Logout
             </button>
@@ -161,122 +179,129 @@ function SocialHome({ onLogout }) {
         </div>
       </nav>
 
-      {/* ================= LAYOUT ================= */}
-
+      {/* ── Layout ─────────────────────────────────────────────────────────── */}
       <div className="container mt-4">
         <div className="row align-items-start">
-          {/* LEFT SIDEBAR */}
+
+          {/* Left sidebar */}
           <div className="col-lg-3 d-none d-lg-block">
             <div className="side-card">
-              <div className="profile-box">
-                <div className="profile-avatar">KV</div>
-                <h6 className="text-white mt-2">KV Ramana</h6>
-                <small className="text-muted">@kvramana</small>
+              <div className="text-center">
+                <div className="profile-avatar">{myInitials}</div>
+                <h6 className="text-white mt-2">{currentUser?.name || myUsername}</h6>
+                <small className="text-muted">@{myUsername}</small>
               </div>
-
               <hr />
-
-              <div className="side-link">🏠 Home</div>
-              <div className="side-link">👥 Friends</div>
-              <div className="side-link">💬 Chat</div>
-              <div className="side-link">⭐ Saved</div>
-              <div className="side-link">⚙ Settings</div>
+              <div className="side-link" onClick={() => navigate("/home")}>🏠 Home</div>
+              <div className="side-link" onClick={() => navigate("/friends")}>👥 Friends</div>
+              <div className="side-link" onClick={() => navigate("/chat")}>💬 Chat</div>
+              <div className="side-link" onClick={() => navigate("/profile")}>⚙ Settings</div>
             </div>
           </div>
 
-          {/* MAIN FEED */}
+          {/* Feed */}
           <div className="col-lg-6 col-md-8 mx-auto">
-            {/* CREATE POST */}
+
+            {/* Create post */}
             <div className="card post-card mb-3">
               <div className="card-body">
-               <div className="d-flex align-items-center mb-3 w-100">
-
-                  <div className="profile-avatar-sm me-3">KV</div>
-
+                <div className="d-flex align-items-center mb-3 w-100">
+                  <div className="profile-avatar-sm me-3">{myInitials}</div>
                   <input
-  type="text"
-  className="input-post form-control flex-grow-1"
-
+                    type="text"
+                    className="input-post form-control flex-grow-1"
                     placeholder="What's happening?"
                     value={newPost}
                     onChange={(e) => setNewPost(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleCreatePost()}
                   />
                 </div>
-
+                {postError && (
+                  <p style={{ color: "#ff5c8a", fontSize: 13, margin: "0 0 8px" }}>
+                    {postError}
+                  </p>
+                )}
                 <div className="text-end">
-                  <button
-                    className="btn btn-primary-custom"
-                    onClick={handleCreatePost}
-                  >
+                  <button className="btn btn-primary-custom" onClick={handleCreatePost}>
                     Post
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* POSTS */}
-            {postsData.map((post) => (
-              <div key={post.id} className="card post-card mb-4">
-                <div className="card-body">
-                  {/* Header */}
-                  <div className="d-flex align-items-center mb-3">
-                    <div className="profile-avatar-sm me-3">
-                      {post.initials}
+            {/* Posts */}
+            {feedLoading && (
+              <p className="text-center text-muted mt-4">Loading feed…</p>
+            )}
+
+            {!feedLoading && posts.length === 0 && (
+              <p className="text-center text-muted mt-4">
+                No posts yet. Add friends or create your first post!
+              </p>
+            )}
+
+            {posts.map((post) => {
+              const author   = post.author || {};
+              const liked    = isLiked(post);
+              const initials = getInitials(author);
+
+              return (
+                <div key={post._id} className="card post-card mb-4">
+                  <div className="card-body">
+                    <div className="d-flex align-items-center mb-3">
+                      <div className="profile-avatar-sm me-3">{initials}</div>
+                      <div className="flex-grow-1">
+                        <h6 className="mb-0 text-white fw-semibold">
+                          {author.name || author.username}
+                        </h6>
+                        <small className="text-muted">{timeAgo(post.createdAt)}</small>
+                      </div>
                     </div>
 
-                    <div className="flex-grow-1">
-                      <h6 className="mb-0 text-white fw-semibold">
-                        {post.author}
-                      </h6>
-                      <small className="text-muted">{post.time}</small>
+                    <div className="post-content mb-3">{post.content}</div>
+                    {post.image && (
+                      <img
+                        src={post.image}
+                        alt="post"
+                        style={{ width: "100%", borderRadius: 10, marginBottom: 12 }}
+                      />
+                    )}
+
+                    <hr className="post-divider" />
+
+                    <div className="post-actions d-flex justify-content-between px-3">
+                      <div
+                        className={`action-btn ${liked ? "liked" : ""}`}
+                        onClick={() => handleLike(post._id)}
+                      >
+                        ❤️ {post.likes?.length || 0}
+                      </div>
+                      <div className="action-btn">
+                        💬 {post.comments?.length || 0}
+                      </div>
+                      <div className="action-btn">🔁 Share</div>
                     </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="post-content mb-3">{post.content}</div>
-
-                  <hr className="post-divider" />
-
-                  {/* Actions */}
-                  <div className="post-actions d-flex justify-content-between px-3">
-                    <div
-                      className={`action-btn ${post.liked ? "liked" : ""}`}
-                      onClick={() => handleLike(post.id)}
-                    >
-                      ❤️ {post.likes}
-                    </div>
-
-                    <div className="action-btn">💬 Comment</div>
-
-                    <div className="action-btn">🔁 Share</div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* RIGHT SIDEBAR */}
+          {/* Right sidebar */}
           <div className="col-lg-3 d-none d-lg-block">
             <div className="side-card">
               <h6 className="text-white mb-3">🔥 Trending</h6>
               <div className="trend-item">#ReactJS</div>
               <div className="trend-item">#MERNStack</div>
               <div className="trend-item">#WebDev</div>
-
               <hr />
-
               <h6 className="text-white mb-2">👤 Suggestions</h6>
-              <div className="suggest-user">
-                <div className="avatar-sm">AJ</div>
-                Alex Johnson
-              </div>
-              <div className="suggest-user">
-                <div className="avatar-sm green">JS</div>
-                Jane Smith
-              </div>
+              <p className="text-muted" style={{ fontSize: 13 }}>
+                Add friends to see suggestions.
+              </p>
             </div>
           </div>
+
         </div>
       </div>
     </div>

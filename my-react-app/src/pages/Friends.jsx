@@ -1,146 +1,137 @@
-
+// src/pages/Friends.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { friendsAPI } from "../services/api";
 import "./Friends.css";
 
-
-const requestsData = [
-  { id: 1, name: "Emma Watson", mutuals: 5, avatar: "https://i.pravatar.cc/150?img=32" },
-  { id: 2, name: "Chris Evans", mutuals: 2, avatar: "https://i.pravatar.cc/150?img=12" },
-  { id: 3, name: "Zendaya Coleman", mutuals: 6, avatar: "https://i.pravatar.cc/150?img=47" },
-  { id: 4, name: "Andrew Garfield", mutuals: 3, avatar: "https://i.pravatar.cc/150?img=22" },
-];
-
-const suggestionsData = [
-  { id: 5, name: "Robert Downey Jr.", mutuals: 8, avatar: "https://i.pravatar.cc/150?img=56" },
-  { id: 6, name: "Scarlett Johansson", mutuals: 4, avatar: "https://i.pravatar.cc/150?img=48" },
-  { id: 7, name: "Henry Cavill", mutuals: 7, avatar: "https://i.pravatar.cc/150?img=60" },
-  { id: 8, name: "Gal Gadot", mutuals: 5, avatar: "https://i.pravatar.cc/150?img=44" },
-  { id: 9, name: "Jason Momoa", mutuals: 6, avatar: "https://i.pravatar.cc/150?img=58" },
-];
-
-const friendsData = [
-  { id: 10, name: "Mark Ruffalo", avatar: "https://i.pravatar.cc/150?img=15", birthday: "today" },
-  { id: 11, name: "Tom Holland", avatar: "https://i.pravatar.cc/150?img=25", birthday: "upcoming" },
-  { id: 12, name: "Benedict Cumberbatch", avatar: "https://i.pravatar.cc/150?img=33", birthday: null },
-  { id: 13, name: "Chris Hemsworth", avatar: "https://i.pravatar.cc/150?img=20", birthday: null },
-  { id: 14, name: "Natalie Portman", avatar: "https://i.pravatar.cc/150?img=45", birthday: "upcoming" },
-  { id: 15, name: "Elizabeth Olsen", avatar: "https://i.pravatar.cc/150?img=41", birthday: null },
-];
-
-/* ------------------ COMPONENT ------------------ */
-
-function Friends() {
-  const navigate = useNavigate();
+function Friends({ currentUser }) {
+  const navigate    = useNavigate();
   const dropdownRef = useRef(null);
 
-  const [activeSection, setActiveSection] = useState("requests");
-  const [requests, setRequests] = useState(requestsData);
-  const [suggestions, setSuggestions] = useState(suggestionsData);
-  const [friends, setFriends] = useState(friendsData);
-  const [search, setSearch] = useState("");
-  const [showSettings, setShowSettings] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
+  const [activeSection,  setActiveSection]  = useState("requests");
+  const [requests,       setRequests]       = useState([]);
+  const [suggestions,    setSuggestions]    = useState([]);
+  const [friends,        setFriends]        = useState([]);
+  const [search,         setSearch]         = useState("");
+  const [showSettings,   setShowSettings]   = useState(false);
+  const [previewImage,   setPreviewImage]   = useState(null);
+  const [loading,        setLoading]        = useState(true);
 
-
+  // Load data whenever section changes
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    setLoading(true);
+
+    const loaders = {
+      requests:    () => friendsAPI.getRequests().then((d) => setRequests(d.requests)),
+      suggestions: () => friendsAPI.getSuggestions().then((d) => setSuggestions(d.suggestions)),
+      all:         () => friendsAPI.getFriends().then((d) => setFriends(d.friends)),
+      birthdays:   () => friendsAPI.getFriends().then((d) => setFriends(d.friends)),
+    };
+
+    loaders[activeSection]?.()
+      .catch((err) => console.error("Friends load error:", err))
+      .finally(() => setLoading(false));
+  }, [activeSection]);
+
+  // Close settings dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
         setShowSettings(false);
-      }
     };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-
+  // Escape to close preview
   useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === "Escape") {
-        setPreviewImage(null);
-      }
-    };
-
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
+    const handler = (e) => e.key === "Escape" && setPreviewImage(null);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  /* ------------------ ACTIONS ------------------ */
+  // ── Actions ────────────────────────────────────────────────────────────────
 
-  const acceptRequest = (user) => {
-    setRequests((prev) => prev.filter((r) => r.id !== user.id));
-    setFriends((prev) => [...prev, { ...user, birthday: null }]);
+  const acceptRequest = async (req) => {
+    try {
+      await friendsAPI.acceptRequest(req.from._id);
+      setRequests((prev) => prev.filter((r) => r.from._id !== req.from._id));
+      setFriends((prev) => [...prev, req.from]);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
-  const deleteRequest = (id) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id));
+  const declineRequest = async (req) => {
+    try {
+      await friendsAPI.declineRequest(req.from._id);
+      setRequests((prev) => prev.filter((r) => r.from._id !== req.from._id));
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
-  const addFriend = (user) => {
-    setSuggestions((prev) => prev.filter((s) => s.id !== user.id));
-    setFriends((prev) => [...prev, { ...user, birthday: null }]);
+  const addFriend = async (user) => {
+    try {
+      await friendsAPI.sendRequest(user._id);
+      setSuggestions((prev) => prev.filter((s) => s._id !== user._id));
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
-  const removeSuggestion = (id) => {
-    setSuggestions((prev) => prev.filter((s) => s.id !== id));
-  };
+  const removeSuggestion = (userId) =>
+    setSuggestions((prev) => prev.filter((s) => s._id !== userId));
 
-  const toggleSettings = () => {
-    setShowSettings((prev) => !prev);
-  };
+  const openPreview = (avatarUrl) => setPreviewImage(avatarUrl);
 
-  const handleSettingClick = (option) => {
-    alert(`${option} clicked`);
-    setShowSettings(false);
-  };
-
-  const openPreview = (avatarUrl) => {
-    const highRes = avatarUrl.replace(/\/\d+/, "/600");
-    setPreviewImage(highRes);
+  const getInitials = (user) => {
+    const name = user?.name || user?.username || "?";
+    return name.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2);
   };
 
   const filteredFriends = friends.filter((f) =>
-    f.name.toLowerCase().includes(search.toLowerCase())
+    (f.name || f.username || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const todayBirthdays = friends.filter((f) => f.birthday === "today");
-  const upcomingBirthdays = friends.filter((f) => f.birthday === "upcoming");
-
-  /* ------------------ UI ------------------ */
+  const todayBirthdays    = friends.filter((f) => {
+    if (!f.birthday) return false;
+    const b = new Date(f.birthday);
+    const n = new Date();
+    return b.getMonth() === n.getMonth() && b.getDate() === n.getDate();
+  });
+  const upcomingBirthdays = friends.filter((f) => {
+    if (!f.birthday) return false;
+    const b = new Date(f.birthday);
+    const n = new Date();
+    const diff = (b.setFullYear(n.getFullYear()) - n) / 86400000;
+    return diff > 0 && diff <= 7;
+  });
 
   return (
     <div className="friends-layout">
-      {/* SIDEBAR */}
+      {/* Sidebar */}
       <aside className="friends-sidebar">
         <div className="sidebar-header">
           <h3>Friends</h3>
-
           <div className="settings-container" ref={dropdownRef}>
             <span
               className="settings-icon"
-              onClick={toggleSettings}
-              title="Friends Settings"
+              onClick={() => setShowSettings((p) => !p)}
+              title="Settings"
             >
               ⚙
             </span>
-
             {showSettings && (
               <div className="settings-dropdown">
-                <div onClick={() => handleSettingClick("Privacy Settings")}>
+                <div onClick={() => { alert("Privacy Settings"); setShowSettings(false); }}>
                   Privacy Settings
                 </div>
-                <div onClick={() => handleSettingClick("Notification Settings")}>
+                <div onClick={() => { alert("Notifications"); setShowSettings(false); }}>
                   Notification Settings
                 </div>
-                <div onClick={() => handleSettingClick("Blocked Users")}>
+                <div onClick={() => { alert("Blocked Users"); setShowSettings(false); }}>
                   Blocked Users
-                </div>
-                <div onClick={() => handleSettingClick("Friend Request Settings")}>
-                  Friend Request Settings
-                </div>
-                <div onClick={() => handleSettingClick("Manage Contacts")}>
-                  Manage Contacts
                 </div>
               </div>
             )}
@@ -148,184 +139,133 @@ function Friends() {
         </div>
 
         <ul>
-          <li className="home-item" onClick={() => navigate("/home")}>
-            Home
-          </li>
-
-          <li
-            className={activeSection === "requests" ? "active" : ""}
-            onClick={() => setActiveSection("requests")}
-          >
-            Friend Requests
-          </li>
-
-          <li
-            className={activeSection === "suggestions" ? "active" : ""}
-            onClick={() => setActiveSection("suggestions")}
-          >
-            Suggestions
-          </li>
-
-          <li
-            className={activeSection === "all" ? "active" : ""}
-            onClick={() => setActiveSection("all")}
-          >
-            All Friends
-          </li>
-
-          <li
-            className={activeSection === "birthdays" ? "active" : ""}
-            onClick={() => setActiveSection("birthdays")}
-          >
-            Birthdays
-          </li>
+          <li className="home-item" onClick={() => navigate("/home")}>Home</li>
+          {["requests", "suggestions", "all", "birthdays"].map((s) => (
+            <li
+              key={s}
+              className={activeSection === s ? "active" : ""}
+              onClick={() => setActiveSection(s)}
+            >
+              {s === "requests"    ? "Friend Requests" :
+               s === "suggestions" ? "Suggestions" :
+               s === "all"         ? "All Friends" :
+               "Birthdays"}
+            </li>
+          ))}
         </ul>
       </aside>
 
       <main className="friends-content">
+        {loading && <p style={{ color: "#aaa" }}>Loading…</p>}
 
-        {/* REQUESTS */}
-        {activeSection === "requests" && (
+        {/* Friend Requests */}
+        {!loading && activeSection === "requests" && (
           <section>
-            <h2>Friend Requests</h2>
+            <h2>Friend Requests {requests.length > 0 && `(${requests.length})`}</h2>
+            {requests.length === 0 && <p style={{ color: "#aaa" }}>No pending requests.</p>}
             <div className="card-grid">
-              {requests.map((user) => (
-                <div className="friend-card" key={user.id}>
+              {requests.map((req) => (
+                <div className="friend-card" key={req.from._id}>
                   <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="clickable-avatar"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openPreview(user.avatar);
-                    }}
+                    src={req.from.profilePic || `https://ui-avatars.com/api/?name=${req.from.username}&background=6c5ce7&color=fff`}
+                    alt={req.from.username}
+                    onClick={() => openPreview(req.from.profilePic)}
                   />
-                  <h4>{user.name}</h4>
-                  <p>{user.mutuals} mutual friends</p>
-                  <button className="btn-primary" onClick={() => acceptRequest(user)}>
-                    Confirm
-                  </button>
-                  <button className="btn-secondary" onClick={() => deleteRequest(user.id)}>
-                    Delete
-                  </button>
+                  <h4>{req.from.name || req.from.username}</h4>
+                  <p>@{req.from.username}</p>
+                  <button className="btn-primary" onClick={() => acceptRequest(req)}>Confirm</button>
+                  <button className="btn-secondary" onClick={() => declineRequest(req)}>Delete</button>
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        {/* SUGGESTIONS */}
-        {activeSection === "suggestions" && (
+        {/* Suggestions */}
+        {!loading && activeSection === "suggestions" && (
           <section>
             <h2>People You May Know</h2>
+            {suggestions.length === 0 && <p style={{ color: "#aaa" }}>No suggestions right now.</p>}
             <div className="card-grid">
               {suggestions.map((user) => (
-                <div className="friend-card" key={user.id}>
+                <div className="friend-card" key={user._id}>
                   <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="clickable-avatar"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openPreview(user.avatar);
-                    }}
+                    src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`}
+                    alt={user.username}
+                    onClick={() => openPreview(user.profilePic)}
                   />
-                  <h4>{user.name}</h4>
-                  <p>{user.mutuals} mutual friends</p>
-                  <button className="btn-primary" onClick={() => addFriend(user)}>
-                    Add Friend
-                  </button>
-                  <button className="btn-secondary" onClick={() => removeSuggestion(user.id)}>
-                    Remove
-                  </button>
+                  <h4>{user.name || user.username}</h4>
+                  <p>@{user.username}</p>
+                  <button className="btn-primary" onClick={() => addFriend(user)}>Add Friend</button>
+                  <button className="btn-secondary" onClick={() => removeSuggestion(user._id)}>Remove</button>
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        {/* ALL FRIENDS */}
-        {activeSection === "all" && (
+        {/* All Friends */}
+        {!loading && activeSection === "all" && (
           <section>
-            <h2>All Friends</h2>
+            <h2>All Friends ({friends.length})</h2>
             <input
               className="search-input"
-              placeholder="Search friends"
+              placeholder="Search friends…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-
+            {filteredFriends.length === 0 && (
+              <p style={{ color: "#aaa" }}>
+                {friends.length === 0 ? "No friends yet." : "No friends match your search."}
+              </p>
+            )}
             {filteredFriends.map((user) => (
-              <div className="friend-row" key={user.id}>
+              <div className="friend-row" key={user._id}>
                 <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="clickable-avatar"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openPreview(user.avatar);
-                  }}
+                  src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`}
+                  alt={user.username}
+                  onClick={() => openPreview(user.profilePic)}
                 />
-                <span>{user.name}</span>
+                <span>{user.name || user.username}</span>
                 <button className="btn-secondary">Friends</button>
               </div>
             ))}
           </section>
         )}
 
-        {/* BIRTHDAYS */}
-        {activeSection === "birthdays" && (
+        {/* Birthdays */}
+        {!loading && activeSection === "birthdays" && (
           <section>
             <h2>Birthdays</h2>
-
             {todayBirthdays.length > 0 && (
               <>
                 <h3>🎉 Today</h3>
                 {todayBirthdays.map((user) => (
-                  <div className="friend-row" key={user.id}>
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      className="clickable-avatar"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openPreview(user.avatar);
-                      }}
-                    />
-                    <span>{user.name}</span>
-                    <button className="btn-primary">Wish</button>
+                  <div className="friend-row" key={user._id}>
+                    <img src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`} alt={user.username} />
+                    <span>{user.name || user.username}</span>
+                    <button className="btn-primary">Wish 🎂</button>
                   </div>
                 ))}
               </>
             )}
-
             {upcomingBirthdays.length > 0 && (
               <>
-                <h3 style={{ marginTop: "20px" }}>🎂 Upcoming</h3>
+                <h3 style={{ marginTop: 20 }}>🎂 Upcoming (next 7 days)</h3>
                 {upcomingBirthdays.map((user) => (
-                  <div className="friend-row" key={user.id}>
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      className="clickable-avatar"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openPreview(user.avatar);
-                      }}
-                    />
-                    <span>{user.name}</span>
+                  <div className="friend-row" key={user._id}>
+                    <img src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`} alt={user.username} />
+                    <span>{user.name || user.username}</span>
                     <button className="btn-secondary">Remind Me</button>
                   </div>
                 ))}
               </>
             )}
-
             {todayBirthdays.length === 0 && upcomingBirthdays.length === 0 && (
               <p style={{ color: "#aaa" }}>No upcoming birthdays 🎂</p>
             )}
           </section>
         )}
-
       </main>
 
       {previewImage && (
