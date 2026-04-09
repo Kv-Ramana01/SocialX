@@ -1,55 +1,60 @@
 // socialx-backend/controllers/postController.js
-// UPGRADED: Privacy enforcement, notifications, post visibility, save/bookmark
+// FIXED: Privacy enforcement — friends-only posts actually filtered properly
 const Post = require("../models/Post");
 const User = require("../models/User");
 const Notification = require("../models/Notification");
-const { filterPostsForUser } = require("../middleware/privacy");
 const { emitNotificationToUser } = require("../socket/socketManager");
 
+// ─── Helper: get friend IDs for a user ───────────────────────────────────────
+const getFriendIds = async (userId) => {
+  const user = await User.findById(userId).select("friends").lean();
+  return (user?.friends || []).map((f) => f.toString());
+};
+
+// ─── Helper: check if a post is visible to requesterId ───────────────────────
+const isPostVisible = (post, requesterId, friendIds) => {
+  const authorId = (post.author?._id || post.author).toString();
+
+  // Author always sees own posts
+  if (authorId === requesterId.toString()) return true;
+
+  const visibility = post.visibility || "public";
+  if (visibility === "public")  return true;
+  if (visibility === "private") return false;
+  if (visibility === "friends") return friendIds.includes(authorId);
+
+  return false;
+};
+
 // @route   GET /api/posts
-// @desc    Global feed with privacy filtering + cursor-based infinite scroll
-// @access  Private
+// @desc    Global feed with REAL privacy filtering
 const getFeed = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 15;
-    const cursor = req.query.cursor; // createdAt of last post seen
+    const limit  = parseInt(req.query.limit)  || 15;
+    const cursor = req.query.cursor;
 
     const query = {};
-    if (cursor) {
-      query.createdAt = { $lt: new Date(cursor) };
-    }
+    if (cursor) query.createdAt = { $lt: new Date(cursor) };
 
-    // Get current user's friend list for privacy filtering
-    const currentUser = await User.findById(req.user._id).select("friends").lean();
-    const friendIds = currentUser.friends.map((f) => f.toString());
+    // Get friend IDs once
+    const friendIds = await getFriendIds(req.user._id);
+    const requesterId = req.user._id.toString();
 
-    // Fetch posts — slightly over limit so we can filter by privacy
-    // Fetch enough to account for filtered-out private/friends posts
+    // Over-fetch to account for filtered posts
     const posts = await Post.find(query)
       .populate("author", "username name profilePic isOnline")
       .populate("comments.user", "username name profilePic")
       .sort({ createdAt: -1 })
-      .limit(limit * 3) // over-fetch, then filter
+      .limit(limit * 4)
       .lean();
 
-    // Apply privacy filtering
-    const visiblePosts = posts.filter((post) => {
-      const authorId = (post.author._id || post.author).toString();
-
-      // Author sees own posts
-      if (authorId === req.user._id.toString()) return true;
-
-      const visibility = post.visibility || "public";
-      if (visibility === "public") return true;
-      if (visibility === "private") return false;
-      if (visibility === "friends") {
-        return friendIds.includes(authorId);
-      }
-      return false;
-    });
+    // Apply privacy filter
+    const visiblePosts = posts.filter((post) =>
+      isPostVisible(post, requesterId, friendIds)
+    );
 
     const paginated = visiblePosts.slice(0, limit);
-    const hasMore = visiblePosts.length > limit;
+    const hasMore   = visiblePosts.length > limit;
     const nextCursor =
       hasMore && paginated.length > 0
         ? paginated[paginated.length - 1].createdAt.toISOString()
@@ -67,23 +72,18 @@ const getFeed = async (req, res) => {
 };
 
 // @route   POST /api/posts
-// @desc    Create post with visibility setting
-// @access  Private
 const createPost = async (req, res) => {
   try {
     const { content, image, visibility = "public" } = req.body;
 
-    if (!content || !content.trim()) {
+    if (!content || !content.trim())
       return res.status(400).json({ success: false, message: "Post content is required." });
-    }
 
-    if (!["public", "friends", "private"].includes(visibility)) {
+    if (!["public", "friends", "private"].includes(visibility))
       return res.status(400).json({ success: false, message: "Invalid visibility setting." });
-    }
 
-    if (image && image.length > 7 * 1024 * 1024) {
+    if (image && image.length > 7 * 1024 * 1024)
       return res.status(400).json({ success: false, message: "Image too large. Please use an image under 5MB." });
-    }
 
     const post = await Post.create({
       author: req.user._id,
@@ -101,19 +101,15 @@ const createPost = async (req, res) => {
 };
 
 // @route   DELETE /api/posts/:id
-// @access  Private (author only)
 const deletePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: "Post not found." });
-    if (post.author.toString() !== req.user._id.toString()) {
+    if (post.author.toString() !== req.user._id.toString())
       return res.status(403).json({ success: false, message: "Not authorized." });
-    }
+
     await post.deleteOne();
-
-    // Clean up related notifications
     await Notification.deleteMany({ post: req.params.id });
-
     res.status(200).json({ success: true, message: "Post deleted." });
   } catch (error) {
     console.error("DeletePost error:", error);
@@ -122,32 +118,31 @@ const deletePost = async (req, res) => {
 };
 
 // @route   PUT /api/posts/:id/like
-// @access  Private
 const toggleLike = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id).populate("author", "username name profilePic");
     if (!post) return res.status(404).json({ success: false, message: "Post not found." });
 
+    // Privacy check — can this user see this post?
+    const friendIds = await getFriendIds(req.user._id);
+    if (!isPostVisible(post, req.user._id, friendIds))
+      return res.status(403).json({ success: false, message: "Not authorized." });
+
     const userId = req.user._id;
-    const alreadyLiked = post.likes.some(
-      (id) => id.toString() === userId.toString()
-    );
+    const alreadyLiked = post.likes.some((id) => id.toString() === userId.toString());
 
     if (alreadyLiked) {
       post.likes = post.likes.filter((id) => id.toString() !== userId.toString());
     } else {
       post.likes.push(userId);
-
-      // Notify post author (not if liking own post)
       if (post.author._id.toString() !== userId.toString()) {
         const notification = await Notification.create({
           recipient: post.author._id,
           sender: userId,
           type: "like",
           post: post._id,
-          message: `liked your post`,
+          message: "liked your post",
         });
-
         const io = req.app.get("io");
         if (io) {
           await notification.populate("sender", "username name profilePic");
@@ -157,12 +152,7 @@ const toggleLike = async (req, res) => {
     }
 
     await post.save();
-    res.status(200).json({
-      success: true,
-      liked: !alreadyLiked,
-      likeCount: post.likes.length,
-      post,
-    });
+    res.status(200).json({ success: true, liked: !alreadyLiked, likeCount: post.likes.length, post });
   } catch (error) {
     console.error("ToggleLike error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -170,16 +160,19 @@ const toggleLike = async (req, res) => {
 };
 
 // @route   POST /api/posts/:id/comments
-// @access  Private
 const addComment = async (req, res) => {
   try {
     const { text } = req.body;
-    if (!text || !text.trim()) {
+    if (!text || !text.trim())
       return res.status(400).json({ success: false, message: "Comment text is required." });
-    }
 
     const post = await Post.findById(req.params.id).populate("author", "_id username name profilePic");
     if (!post) return res.status(404).json({ success: false, message: "Post not found." });
+
+    // Privacy check
+    const friendIds = await getFriendIds(req.user._id);
+    if (!isPostVisible(post, req.user._id, friendIds))
+      return res.status(403).json({ success: false, message: "Not authorized." });
 
     post.comments.push({ user: req.user._id, text: text.trim() });
     await post.save();
@@ -187,7 +180,6 @@ const addComment = async (req, res) => {
 
     const newComment = post.comments[post.comments.length - 1];
 
-    // Notify post author (not if commenting on own post)
     if (post.author._id.toString() !== req.user._id.toString()) {
       const notification = await Notification.create({
         recipient: post.author._id,
@@ -196,7 +188,6 @@ const addComment = async (req, res) => {
         post: post._id,
         message: text.trim().slice(0, 100),
       });
-
       const io = req.app.get("io");
       if (io) {
         await notification.populate("sender", "username name profilePic");
@@ -212,28 +203,31 @@ const addComment = async (req, res) => {
 };
 
 // @route   GET /api/posts/user/:userId
-// @access  Private — privacy filtered
+// FIXED: Strict privacy — strangers only see public posts
 const getUserPosts = async (req, res) => {
   try {
-    const currentUser = await User.findById(req.user._id).select("friends").lean();
-    const friendIds = currentUser.friends.map((f) => f.toString());
-    const isOwnProfile = req.params.userId === req.user._id.toString();
-    const isFriend = friendIds.includes(req.params.userId);
+    const requesterId  = req.user._id.toString();
+    const targetUserId = req.params.userId;
+    const isOwnProfile = targetUserId === requesterId;
 
-    // Build visibility filter based on relationship
+    // Get the requester's friend list to check relationship
+    const friendIds = await getFriendIds(req.user._id);
+    const isFriend  = friendIds.includes(targetUserId);
+
+    // Build visibility filter — strictly enforce at DB level
     let visibilityFilter;
     if (isOwnProfile) {
+      // Own profile: see everything
       visibilityFilter = { visibility: { $in: ["public", "friends", "private"] } };
     } else if (isFriend) {
+      // Friend: public + friends-only
       visibilityFilter = { visibility: { $in: ["public", "friends"] } };
     } else {
+      // Stranger: public only
       visibilityFilter = { visibility: "public" };
     }
 
-    const posts = await Post.find({
-      author: req.params.userId,
-      ...visibilityFilter,
-    })
+    const posts = await Post.find({ author: targetUserId, ...visibilityFilter })
       .populate("author", "username name profilePic isOnline")
       .populate("comments.user", "username name profilePic")
       .sort({ createdAt: -1 });
@@ -246,17 +240,13 @@ const getUserPosts = async (req, res) => {
 };
 
 // @route   PUT /api/posts/:id/save
-// @desc    Toggle save/bookmark on a post
-// @access  Private
 const toggleSave = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: "Post not found." });
 
     const userId = req.user._id;
-    const alreadySaved = post.savedBy.some(
-      (id) => id.toString() === userId.toString()
-    );
+    const alreadySaved = post.savedBy.some((id) => id.toString() === userId.toString());
 
     if (alreadySaved) {
       post.savedBy = post.savedBy.filter((id) => id.toString() !== userId.toString());
@@ -273,20 +263,16 @@ const toggleSave = async (req, res) => {
 };
 
 // @route   PUT /api/posts/:id/visibility
-// @desc    Update post visibility (author only)
-// @access  Private
 const updateVisibility = async (req, res) => {
   try {
     const { visibility } = req.body;
-    if (!["public", "friends", "private"].includes(visibility)) {
+    if (!["public", "friends", "private"].includes(visibility))
       return res.status(400).json({ success: false, message: "Invalid visibility." });
-    }
 
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: "Post not found." });
-    if (post.author.toString() !== req.user._id.toString()) {
+    if (post.author.toString() !== req.user._id.toString())
       return res.status(403).json({ success: false, message: "Not authorized." });
-    }
 
     post.visibility = visibility;
     await post.save();

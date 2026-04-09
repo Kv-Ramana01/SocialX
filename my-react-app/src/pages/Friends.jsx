@@ -1,83 +1,80 @@
-// src/pages/Friends.jsx
+// src/pages/Friends.jsx — Full SocialX dark theme redesign
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import { friendsAPI } from "../services/api";
-import "./Friends.css";
+import "../styles/sx-theme.css";
+import "./Friends.sx.css";
 
 function Friends({ currentUser }) {
   const navigate    = useNavigate();
   const dropdownRef = useRef(null);
 
-  const [activeSection,  setActiveSection]  = useState("requests");
-  const [requests,       setRequests]       = useState([]);
-  const [suggestions,    setSuggestions]    = useState([]);
-  const [friends,        setFriends]        = useState([]);
-  const [search,         setSearch]         = useState("");
-  const [showSettings,   setShowSettings]   = useState(false);
-  const [previewImage,   setPreviewImage]   = useState(null);
-  const [loading,        setLoading]        = useState(true);
+  const [activeSection, setActiveSection] = useState("requests");
+  const [requests,      setRequests]      = useState([]);
+  const [suggestions,   setSuggestions]   = useState([]);
+  const [friends,       setFriends]       = useState([]);
+  const [search,        setSearch]        = useState("");
+  const [showSettings,  setShowSettings]  = useState(false);
+  const [previewImage,  setPreviewImage]  = useState(null);
+  const [loading,       setLoading]       = useState(true);
 
   useEffect(() => {
     setLoading(true);
     const loaders = {
-      requests:    () => friendsAPI.getRequests().then((d) => setRequests(d.requests)),
+      requests:    () => friendsAPI.getRequests().then((d)    => setRequests(d.requests)),
       suggestions: () => friendsAPI.getSuggestions().then((d) => setSuggestions(d.suggestions)),
-      all:         () => friendsAPI.getFriends().then((d) => setFriends(d.friends)),
-      birthdays:   () => friendsAPI.getFriends().then((d) => setFriends(d.friends)),
+      all:         () => friendsAPI.getFriends().then((d)     => setFriends(d.friends)),
+      birthdays:   () => friendsAPI.getFriends().then((d)     => setFriends(d.friends)),
     };
     loaders[activeSection]?.()
       .catch((err) => console.error("Friends load error:", err))
-      .finally(() => setLoading(false));
+      .finally(()  => setLoading(false));
   }, [activeSection]);
 
   useEffect(() => {
-    const handler = (e) => {
+    const h = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target))
         setShowSettings(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
 
   useEffect(() => {
-    const handler = (e) => e.key === "Escape" && setPreviewImage(null);
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    const h = (e) => e.key === "Escape" && setPreviewImage(null);
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, []);
 
-  const acceptRequest = async (req) => {
+  const acceptRequest  = async (req) => {
     try {
       await friendsAPI.acceptRequest(req.from._id);
-      setRequests((prev) => prev.filter((r) => r.from._id !== req.from._id));
-      setFriends((prev) => [...prev, req.from]);
+      setRequests((p) => p.filter((r) => r.from._id !== req.from._id));
+      setFriends((p)  => [...p, req.from]);
     } catch (err) { alert(err.message); }
   };
 
   const declineRequest = async (req) => {
     try {
       await friendsAPI.declineRequest(req.from._id);
-      setRequests((prev) => prev.filter((r) => r.from._id !== req.from._id));
+      setRequests((p) => p.filter((r) => r.from._id !== req.from._id));
     } catch (err) { alert(err.message); }
   };
 
   const addFriend = async (user) => {
     try {
       await friendsAPI.sendRequest(user._id);
-      setSuggestions((prev) => prev.filter((s) => s._id !== user._id));
+      setSuggestions((p) => p.filter((s) => s._id !== user._id));
     } catch (err) { alert(err.message); }
   };
 
-  const removeSuggestion = (userId) =>
-    setSuggestions((prev) => prev.filter((s) => s._id !== userId));
+  const removeSuggestion = (id) => setSuggestions((p) => p.filter((s) => s._id !== id));
 
-  // ── NEW: go to chat with this friend ────────────────────────────────────────
-  const chatWithFriend = (friendId) => {
-    navigate("/chat", { state: { openUserId: friendId } });
-  };
+  const chatWithFriend = (id) => navigate("/chat", { state: { openUserId: id } });
 
   const getInitials = (user) => {
-    const name = user?.name || user?.username || "?";
-    return name.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2);
+    const n = user?.name || user?.username || "?";
+    return n.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2);
   };
 
   const filteredFriends = friends.filter((f) =>
@@ -86,163 +83,251 @@ function Friends({ currentUser }) {
 
   const todayBirthdays = friends.filter((f) => {
     if (!f.birthday) return false;
-    const b = new Date(f.birthday);
-    const n = new Date();
+    const b = new Date(f.birthday), n = new Date();
     return b.getMonth() === n.getMonth() && b.getDate() === n.getDate();
   });
 
   const upcomingBirthdays = friends.filter((f) => {
     if (!f.birthday) return false;
-    const b = new Date(f.birthday);
-    const n = new Date();
-    const diff = (b.setFullYear(n.getFullYear()) - n) / 86400000;
+    const b = new Date(f.birthday), n = new Date();
+    const diff = (new Date(n.getFullYear(), b.getMonth(), b.getDate()) - n) / 86400000;
     return diff > 0 && diff <= 7;
   });
 
+  const navItems = [
+    { id: "requests",    label: "Friend Requests", icon: "👋", badge: requests.length },
+    { id: "suggestions", label: "Suggestions",     icon: "💡" },
+    { id: "all",         label: "All Friends",     icon: "👥", badge: friends.length },
+    { id: "birthdays",   label: "Birthdays",       icon: "🎂" },
+  ];
+
   return (
-    <div className="friends-layout">
-      {/* Sidebar */}
-      <aside className="friends-sidebar">
-        <div className="sidebar-header">
-          <h3>Friends</h3>
-          <div className="settings-container" ref={dropdownRef}>
-            <span className="settings-icon" onClick={() => setShowSettings((p) => !p)} title="Settings">⚙</span>
-            {showSettings && (
-              <div className="settings-dropdown">
-                <div onClick={() => { navigate("/settings"); setShowSettings(false); }}>Privacy Settings</div>
-                <div onClick={() => { navigate("/settings"); setShowSettings(false); }}>Notification Settings</div>
-                <div onClick={() => { navigate("/settings"); setShowSettings(false); }}>Blocked Users</div>
-              </div>
-            )}
+    <div className="fsx-root">
+      {/* Nav */}
+      <nav className="sx-nav fsx-nav">
+        <div className="sx-nav-inner">
+          <div className="sx-logo" onClick={() => navigate("/home")}>SocialX</div>
+          <div className="sx-nav-links">
+            <NavLink to="/home"    className={({ isActive }) => `sx-nav-link${isActive ? " active" : ""}`}>Home</NavLink>
+            <NavLink to="/friends" className={({ isActive }) => `sx-nav-link${isActive ? " active" : ""}`}>Friends</NavLink>
+            <NavLink to="/chat"    className={({ isActive }) => `sx-nav-link${isActive ? " active" : ""}`}>Messages</NavLink>
+          </div>
+          <div className="sx-nav-right">
+            <div className="sx-nav-avatar" onClick={() => navigate("/profile")}>
+              {currentUser?.profilePic
+                ? <img src={currentUser.profilePic} alt="me" />
+                : <span>{getInitials(currentUser)}</span>
+              }
+            </div>
+            <button className="sx-logout-btn" onClick={() => navigate("/home")}>🏠 Home</button>
           </div>
         </div>
-        <ul>
-          <li className="home-item" onClick={() => navigate("/home")}>🏠 Home</li>
-          {["requests", "suggestions", "all", "birthdays"].map((s) => (
-            <li key={s} className={activeSection === s ? "active" : ""} onClick={() => setActiveSection(s)}>
-              {s === "requests" ? "Friend Requests" : s === "suggestions" ? "Suggestions" : s === "all" ? "All Friends" : "Birthdays"}
-            </li>
-          ))}
-        </ul>
-      </aside>
+      </nav>
 
-      <main className="friends-content">
-        {loading && <p style={{ color: "#aaa" }}>Loading…</p>}
-
-        {/* Friend Requests */}
-        {!loading && activeSection === "requests" && (
-          <section>
-            <h2>Friend Requests {requests.length > 0 && `(${requests.length})`}</h2>
-            {requests.length === 0 && <p style={{ color: "#aaa" }}>No pending requests.</p>}
-            <div className="card-grid">
-              {requests.map((req) => (
-                <div className="friend-card" key={req.from._id}>
-                  <img
-                    src={req.from.profilePic || `https://ui-avatars.com/api/?name=${req.from.username}&background=6c5ce7&color=fff`}
-                    alt={req.from.username}
-                    onClick={() => setPreviewImage(req.from.profilePic)}
-                  />
-                  <h4>{req.from.name || req.from.username}</h4>
-                  <p>@{req.from.username}</p>
-                  <button className="btn-primary" onClick={() => acceptRequest(req)}>Confirm</button>
-                  <button className="btn-secondary" onClick={() => declineRequest(req)}>Delete</button>
+      <div className="fsx-layout">
+        {/* Sidebar */}
+        <aside className="fsx-sidebar">
+          <div className="fsx-sidebar-header">
+            <h3 className="fsx-sidebar-title">Friends</h3>
+            <div className="fsx-settings-wrap" ref={dropdownRef}>
+              <button className="fsx-settings-btn" onClick={() => setShowSettings((p) => !p)}>⚙</button>
+              {showSettings && (
+                <div className="fsx-settings-dropdown">
+                  {[
+                    { label: "Privacy Settings",       path: "/settings" },
+                    { label: "Notification Settings",  path: "/settings" },
+                    { label: "Blocked Users",          path: "/settings" },
+                  ].map((item) => (
+                    <div key={item.label} className="fsx-dropdown-item"
+                      onClick={() => { navigate(item.path); setShowSettings(false); }}>
+                      {item.label}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          </section>
-        )}
+          </div>
 
-        {/* Suggestions */}
-        {!loading && activeSection === "suggestions" && (
-          <section>
-            <h2>People You May Know</h2>
-            {suggestions.length === 0 && <p style={{ color: "#aaa" }}>No suggestions right now.</p>}
-            <div className="card-grid">
-              {suggestions.map((user) => (
-                <div className="friend-card" key={user._id}>
-                  <img
-                    src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`}
-                    alt={user.username}
-                    onClick={() => setPreviewImage(user.profilePic)}
-                  />
-                  <h4>{user.name || user.username}</h4>
-                  <p>@{user.username}</p>
-                  <button className="btn-primary" onClick={() => addFriend(user)}>Add Friend</button>
-                  <button className="btn-secondary" onClick={() => removeSuggestion(user._id)}>Remove</button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* All Friends — now with Message button */}
-        {!loading && activeSection === "all" && (
-          <section>
-            <h2>All Friends ({friends.length})</h2>
-            <input
-              className="search-input"
-              placeholder="Search friends…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {filteredFriends.length === 0 && (
-              <p style={{ color: "#aaa" }}>{friends.length === 0 ? "No friends yet." : "No friends match your search."}</p>
-            )}
-            {filteredFriends.map((user) => (
-              <div className="friend-row" key={user._id}>
-                <img
-                  src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`}
-                  alt={user.username}
-                  onClick={() => setPreviewImage(user.profilePic)}
-                />
-                <span>{user.name || user.username}</span>
-                {/* NEW: Message button → opens chat with this friend */}
-                <button className="btn-primary" onClick={() => chatWithFriend(user._id)}>💬 Message</button>
-                <button className="btn-secondary">Friends ✓</button>
-              </div>
+          <nav className="fsx-sidebar-nav">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                className={`fsx-nav-item${activeSection === item.id ? " active" : ""}`}
+                onClick={() => setActiveSection(item.id)}
+              >
+                <span className="fsx-nav-icon">{item.icon}</span>
+                <span className="fsx-nav-label">{item.label}</span>
+                {item.badge > 0 && <span className="sx-badge">{item.badge}</span>}
+              </button>
             ))}
-          </section>
-        )}
+          </nav>
+        </aside>
 
-        {/* Birthdays */}
-        {!loading && activeSection === "birthdays" && (
-          <section>
-            <h2>Birthdays</h2>
-            {todayBirthdays.length > 0 && (
-              <>
-                <h3>🎉 Today</h3>
-                {todayBirthdays.map((user) => (
-                  <div className="friend-row" key={user._id}>
-                    <img src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`} alt={user.username} />
-                    <span>{user.name || user.username}</span>
-                    <button className="btn-primary" onClick={() => chatWithFriend(user._id)}>Wish 🎂</button>
+        {/* Main */}
+        <main className="fsx-main">
+          {loading ? (
+            <div className="fsx-skeletons">
+              {[1,2,3].map((i) => (
+                <div key={i} className="fsx-skeleton-card">
+                  <div className="sx-skel" style={{ width: 64, height: 64, borderRadius: "50%" }} />
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div className="sx-skel" style={{ width: "50%", height: 14 }} />
+                    <div className="sx-skel" style={{ width: "30%", height: 12 }} />
                   </div>
-                ))}
-              </>
-            )}
-            {upcomingBirthdays.length > 0 && (
-              <>
-                <h3 style={{ marginTop: 20 }}>🎂 Upcoming (next 7 days)</h3>
-                {upcomingBirthdays.map((user) => (
-                  <div className="friend-row" key={user._id}>
-                    <img src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`} alt={user.username} />
-                    <span>{user.name || user.username}</span>
-                    <button className="btn-secondary">Remind Me</button>
-                  </div>
-                ))}
-              </>
-            )}
-            {todayBirthdays.length === 0 && upcomingBirthdays.length === 0 && (
-              <p style={{ color: "#aaa" }}>No upcoming birthdays 🎂</p>
-            )}
-          </section>
-        )}
-      </main>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Friend Requests */}
+              {activeSection === "requests" && (
+                <section className="sx-animate-in">
+                  <h2 className="fsx-section-heading">
+                    Friend Requests{requests.length > 0 && <span className="fsx-count">{requests.length}</span>}
+                  </h2>
+                  {requests.length === 0
+                    ? <div className="sx-empty-state"><div className="sx-empty-icon">🔔</div><h4>No pending requests</h4><p>You're all caught up!</p></div>
+                    : <div className="fsx-card-grid">
+                        {requests.map((req) => (
+                          <div className="fsx-user-card sx-animate-in" key={req.from._id}>
+                            <div className="fsx-user-card-av" onClick={() => req.from.profilePic && setPreviewImage(req.from.profilePic)}>
+                              {req.from.profilePic
+                                ? <img src={req.from.profilePic} alt={req.from.username} />
+                                : <span>{getInitials(req.from)}</span>
+                              }
+                            </div>
+                            <h4 className="fsx-user-name">{req.from.name || req.from.username}</h4>
+                            <p className="fsx-user-handle">@{req.from.username}</p>
+                            <div className="fsx-user-actions">
+                              <button className="sx-btn-primary fsx-btn" onClick={() => acceptRequest(req)}>Confirm</button>
+                              <button className="sx-btn-secondary fsx-btn" onClick={() => declineRequest(req)}>Delete</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                  }
+                </section>
+              )}
 
+              {/* Suggestions */}
+              {activeSection === "suggestions" && (
+                <section className="sx-animate-in">
+                  <h2 className="fsx-section-heading">People You May Know</h2>
+                  {suggestions.length === 0
+                    ? <div className="sx-empty-state"><div className="sx-empty-icon">💡</div><h4>No suggestions right now</h4><p>Check back later!</p></div>
+                    : <div className="fsx-card-grid">
+                        {suggestions.map((user) => (
+                          <div className="fsx-user-card sx-animate-in" key={user._id}>
+                            <div className="fsx-user-card-av" onClick={() => user.profilePic && setPreviewImage(user.profilePic)}>
+                              {user.profilePic
+                                ? <img src={user.profilePic} alt={user.username} />
+                                : <span>{getInitials(user)}</span>
+                              }
+                            </div>
+                            <h4 className="fsx-user-name">{user.name || user.username}</h4>
+                            <p className="fsx-user-handle">@{user.username}</p>
+                            <div className="fsx-user-actions">
+                              <button className="sx-btn-primary fsx-btn" onClick={() => addFriend(user)}>Add Friend</button>
+                              <button className="sx-btn-secondary fsx-btn" onClick={() => removeSuggestion(user._id)}>Remove</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                  }
+                </section>
+              )}
+
+              {/* All Friends */}
+              {activeSection === "all" && (
+                <section className="sx-animate-in">
+                  <h2 className="fsx-section-heading">
+                    All Friends{friends.length > 0 && <span className="fsx-count">{friends.length}</span>}
+                  </h2>
+                  <div className="fsx-search-wrap">
+                    <span className="fsx-search-icon">⌕</span>
+                    <input
+                      className="sx-input fsx-search"
+                      placeholder="Search friends…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+                  {filteredFriends.length === 0
+                    ? <div className="sx-empty-state"><div className="sx-empty-icon">👥</div><h4>{friends.length === 0 ? "No friends yet" : "No match"}</h4><p>{friends.length === 0 ? "Go add some friends!" : "Try a different search."}</p></div>
+                    : filteredFriends.map((user) => (
+                        <div className="fsx-friend-row sx-animate-in" key={user._id}>
+                          <div className="fsx-row-av" onClick={() => user.profilePic && setPreviewImage(user.profilePic)}>
+                            {user.profilePic ? <img src={user.profilePic} alt="" /> : <span>{getInitials(user)}</span>}
+                            {user.isOnline && <div className="sx-online-dot fsx-row-dot" />}
+                          </div>
+                          <div className="fsx-row-info">
+                            <span className="fsx-row-name">{user.name || user.username}</span>
+                            <span className="fsx-row-handle">@{user.username} · {user.isOnline ? "🟢 Online" : "Offline"}</span>
+                          </div>
+                          <div className="fsx-row-actions">
+                            <button className="sx-btn-primary fsx-btn-sm" onClick={() => chatWithFriend(user._id)}>💬 Message</button>
+                            <button className="sx-btn-secondary fsx-btn-sm">✓ Friends</button>
+                          </div>
+                        </div>
+                      ))
+                  }
+                </section>
+              )}
+
+              {/* Birthdays */}
+              {activeSection === "birthdays" && (
+                <section className="sx-animate-in">
+                  <h2 className="fsx-section-heading">Birthdays</h2>
+                  {todayBirthdays.length > 0 && (
+                    <>
+                      <h3 className="fsx-sub-heading">🎉 Today</h3>
+                      {todayBirthdays.map((user) => (
+                        <div className="fsx-friend-row" key={user._id}>
+                          <div className="fsx-row-av">
+                            {user.profilePic ? <img src={user.profilePic} alt="" /> : <span>{getInitials(user)}</span>}
+                          </div>
+                          <div className="fsx-row-info">
+                            <span className="fsx-row-name">{user.name || user.username}</span>
+                            <span className="fsx-row-handle">🎂 Birthday today!</span>
+                          </div>
+                          <button className="sx-btn-primary fsx-btn-sm" onClick={() => chatWithFriend(user._id)}>Wish 🎂</button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {upcomingBirthdays.length > 0 && (
+                    <>
+                      <h3 className="fsx-sub-heading" style={{ marginTop: 24 }}>🗓 Upcoming (next 7 days)</h3>
+                      {upcomingBirthdays.map((user) => (
+                        <div className="fsx-friend-row" key={user._id}>
+                          <div className="fsx-row-av">
+                            {user.profilePic ? <img src={user.profilePic} alt="" /> : <span>{getInitials(user)}</span>}
+                          </div>
+                          <div className="fsx-row-info">
+                            <span className="fsx-row-name">{user.name || user.username}</span>
+                            <span className="fsx-row-handle">Birthday coming up!</span>
+                          </div>
+                          <button className="sx-btn-secondary fsx-btn-sm">Remind Me</button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {todayBirthdays.length === 0 && upcomingBirthdays.length === 0 && (
+                    <div className="sx-empty-state"><div className="sx-empty-icon">🎂</div><h4>No upcoming birthdays</h4><p>Enjoy the peace and quiet!</p></div>
+                  )}
+                </section>
+              )}
+            </>
+          )}
+        </main>
+      </div>
+
+      {/* Image preview overlay */}
       {previewImage && (
-        <div className="image-preview-overlay" onClick={() => setPreviewImage(null)}>
-          <div className="image-preview-container">
-            <img src={previewImage} alt="Preview" className="preview-image" />
+        <div className="fsx-overlay" onClick={() => setPreviewImage(null)}>
+          <div className="fsx-preview-wrap" onClick={(e) => e.stopPropagation()}>
+            <img src={previewImage} alt="Preview" className="fsx-preview-img" />
+            <button className="fsx-preview-close" onClick={() => setPreviewImage(null)}>×</button>
           </div>
         </div>
       )}

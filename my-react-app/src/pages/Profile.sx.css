@@ -1,0 +1,297 @@
+/* src/pages/Profile.sx.css — SocialX dark theme */
+
+.psx-root {
+  background: var(--sx-bg);
+  min-height: 100vh;
+  color: var(--sx-text);
+  font-family: var(--sx-font-body);
+  padding-bottom: 60px;
+}
+
+.psx-nav-btn {
+  font-size: 13px; padding: 6px 14px;
+}
+
+/* ── Toast ── */
+.psx-toast {
+  position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+  z-index: 9999; padding: 10px 20px; border-radius: 12px;
+  font-size: 14px; font-weight: 500; white-space: nowrap;
+  animation: sx-slide-up 0.3s ease;
+  box-shadow: var(--sx-shadow-lg);
+}
+
+.psx-toast-success {
+  background: rgba(34,197,94,0.15);
+  border: 1px solid rgba(34,197,94,0.4);
+  color: #4ade80;
+}
+
+.psx-toast-error {
+  background: rgba(244,63,94,0.15);
+  border: 1px solid rgba(244,63,94,0.4);
+  color: #fb7185;
+}
+
+/* ── Hero Cover ── */
+.psx-hero { position: relative; }
+
+.psx-cover {
+  width: 100%; height: 280px;
+  background-size: cover; background-position: center;
+  background-color: var(--sx-surface2);
+  position: relative;
+}
+
+.psx-cover-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, rgba(9,9,11,0.7) 100%);
+}
+
+.psx-cover-change-btn {
+  position: absolute; bottom: 14px; right: 14px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff; border-radius: 10px;
+  padding: 7px 14px; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  backdrop-filter: blur(6px);
+  font-family: var(--sx-font-body);
+}
+
+.psx-cover-change-btn:hover {
+  background: rgba(124,106,247,0.5);
+  border-color: var(--sx-accent);
+}
+
+.psx-cover-change-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Profile picture ── */
+.psx-profile-pic-wrap {
+  position: relative;
+  width: 120px; height: 120px;
+  margin: -60px auto 0;
+  z-index: 2;
+}
+
+.psx-profile-pic {
+  width: 120px; height: 120px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--sx-accent), var(--sx-accent2));
+  border: 4px solid var(--sx-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; font-weight: 800; color: #fff;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  font-family: var(--sx-font-display);
+}
+
+.psx-profile-pic img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+.psx-profile-pic-edit {
+  position: absolute; bottom: 4px; right: 4px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--sx-accent); border: none;
+  color: #fff; font-size: 13px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.psx-profile-pic-edit:hover { background: var(--sx-accent2); transform: scale(1.1); }
+
+/* ── Identity block ── */
+.psx-identity {
+  text-align: center; padding: 16px 24px 0;
+}
+
+.psx-name {
+  font-family: var(--sx-font-display);
+  font-size: 26px; font-weight: 800;
+  color: var(--sx-text); margin: 0 0 4px;
+}
+
+.psx-handle { font-size: 14px; color: var(--sx-text3); margin: 0 0 8px; }
+.psx-bio { font-size: 14px; color: var(--sx-text2); margin: 0 0 16px; line-height: 1.6; max-width: 480px; margin-left: auto; margin-right: auto; }
+
+.psx-stats {
+  display: flex; align-items: center; justify-content: center; gap: 20px;
+  margin-bottom: 16px;
+}
+
+.psx-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+
+.psx-stat strong { font-family: var(--sx-font-display); font-size: 20px; font-weight: 700; color: var(--sx-text); }
+.psx-stat span { font-size: 11px; color: var(--sx-text3); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.psx-stat-divider { width: 1px; height: 32px; background: var(--sx-border); }
+
+.psx-action-row {
+  display: flex; gap: 10px; justify-content: center;
+  margin-top: 4px;
+}
+
+/* ── Tabs ── */
+.psx-tabs-wrap {
+  max-width: 860px; margin: 24px auto 0;
+  border-bottom: 1px solid var(--sx-border);
+  padding: 0 20px;
+}
+
+.psx-tabs {
+  display: flex; gap: 4px;
+}
+
+.psx-tab {
+  background: transparent; border: none;
+  padding: 12px 20px; font-size: 14px; font-weight: 500;
+  color: var(--sx-text2); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s; margin-bottom: -1px;
+  font-family: var(--sx-font-body);
+}
+
+.psx-tab:hover { color: var(--sx-text); }
+
+.psx-tab.active {
+  color: var(--sx-accent2);
+  border-bottom-color: var(--sx-accent);
+}
+
+/* ── Body ── */
+.psx-body {
+  max-width: 860px; margin: 24px auto 0;
+  padding: 0 20px;
+}
+
+/* ── Post grid ── */
+.psx-post-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.psx-post-skel { padding: 0; }
+
+.psx-post-card {
+  background: var(--sx-surface);
+  border: 1px solid var(--sx-border);
+  border-radius: var(--sx-radius);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.psx-post-card:hover {
+  border-color: var(--sx-border2);
+  transform: translateY(-3px);
+  box-shadow: var(--sx-shadow);
+}
+
+.psx-post-img-wrap { border-bottom: 1px solid var(--sx-border); }
+.psx-post-img { width: 100%; height: 180px; object-fit: cover; display: block; }
+
+.psx-post-text {
+  padding: 14px 14px 8px;
+  font-size: 14px; color: var(--sx-text); margin: 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.psx-post-meta {
+  padding: 8px 14px 14px;
+  display: flex; gap: 12px;
+  font-size: 12px; color: var(--sx-text3);
+}
+
+.psx-post-time { margin-left: auto; }
+
+/* ── About tab ── */
+.psx-about {
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.psx-about-card {
+  background: var(--sx-surface);
+  border: 1px solid var(--sx-border);
+  border-radius: var(--sx-radius);
+  padding: 20px;
+}
+
+.psx-about-line { font-size: 14px; color: var(--sx-text2); line-height: 1.6; margin: 0 0 8px; }
+.psx-about-empty { font-size: 14px; color: var(--sx-text3); margin: 0; }
+
+.psx-detail-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--sx-border);
+  font-size: 14px;
+}
+
+.psx-detail-row:last-child { border-bottom: none; }
+.psx-detail-icon { font-size: 16px; width: 24px; text-align: center; }
+.psx-detail-label { color: var(--sx-text3); width: 80px; }
+.psx-detail-val { color: var(--sx-text2); }
+
+/* ── Friends tab ── */
+.psx-friends-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.psx-friend-box {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: var(--sx-surface);
+  border: 1px solid var(--sx-border);
+  border-radius: var(--sx-radius);
+  padding: 16px 12px;
+  cursor: pointer; transition: all 0.2s;
+}
+
+.psx-friend-box:hover {
+  border-color: var(--sx-border2);
+  transform: translateY(-3px);
+}
+
+.psx-friend-av {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--sx-accent), var(--sx-accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: #fff;
+  overflow: hidden; position: relative;
+  font-family: var(--sx-font-display);
+}
+
+.psx-friend-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+.psx-friend-dot {
+  position: absolute; bottom: 0; right: 0;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--sx-green); border: 2px solid var(--sx-surface);
+}
+
+.psx-friend-name {
+  font-size: 12px; font-weight: 500; color: var(--sx-text2);
+  text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* ── Link ── */
+.psx-link {
+  color: var(--sx-accent2); cursor: pointer;
+  text-decoration: none; transition: color 0.2s;
+}
+
+.psx-link:hover { color: var(--sx-text); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .psx-cover { height: 200px; }
+  .psx-post-grid { grid-template-columns: 1fr; }
+  .psx-friends-grid { grid-template-columns: repeat(3, 1fr); }
+  .psx-about { flex-direction: column; }
+}

@@ -1,12 +1,11 @@
 // src/Signup.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Login.css";
+import GalaxyCanvas from "./components/auth/GalaxyCanvas";
+import "./styles/auth-galaxy.css"
 
-// FIX: onSignup prop comes from App.jsx — handles token save + state update
 function Signup({ onSignup }) {
   const navigate = useNavigate();
-
   const [username, setUsername] = useState("");
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
@@ -16,24 +15,15 @@ function Signup({ onSignup }) {
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
-
     const usernameRegex = /^[a-zA-Z0-9_]{3,15}$/;
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).{8,}$/;
-
-    if (!usernameRegex.test(username)) {
-      return setError("Username must be 3–15 characters: letters, numbers or _");
-    }
-    if (!passwordRegex.test(password)) {
-      return setError(
-        "Password needs 8+ chars, uppercase, lowercase, number & special character."
-      );
-    }
-
+    if (!usernameRegex.test(username))
+      return setError("Username: 3–15 chars, letters/numbers/_");
+    if (!passwordRegex.test(password))
+      return setError("Password needs 8+ chars, upper, lower, number & symbol.");
     setLoading(true);
     try {
-      // App.jsx handles saveToken + setCurrentUser + setIsLoggedIn
       await onSignup(username, email, password);
-      // App state is now updated → the /signup route renders <Navigate to="/home" />
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");
     } finally {
@@ -42,25 +32,23 @@ function Signup({ onSignup }) {
   };
 
   return (
-    <div className="login-dark d-flex justify-content-center align-items-center vh-100 w-100">
-      <div className="card login-card shadow-lg p-4">
-        <div className="card-body">
+    <>
+      <div className="auth-galaxy-bg">
+        <GalaxyCanvas />
+      </div>
+      <div className="auth-content-layer">
+        <div className="auth-glass-card">
+          <div className="auth-brand">SocialX</div>
+          <p className="auth-tagline">Join the universe ✨</p>
 
-          <h2 className="text-center mb-2 text-white fw-bold">SocialX</h2>
-          <h5 className="text-center text-secondary mb-4">Create Account</h5>
+          {error && <div className="auth-error">{error}</div>}
 
-          {error && (
-            <div className="alert alert-danger py-2 text-center" style={{ fontSize: 14 }}>
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSignup}>
-            <div className="mb-3">
-              <label className="form-label text-light">Username</label>
+          <form onSubmit={handleSignup} noValidate>
+            <div className="auth-input-group">
+              <label className="auth-label">Username</label>
               <input
                 type="text"
-                className="form-control input-dark"
+                className="auth-input"
                 placeholder="johndoe123"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -68,56 +56,46 @@ function Signup({ onSignup }) {
                 disabled={loading}
               />
             </div>
-
-            <div className="mb-3">
-              <label className="form-label text-light">Email address</label>
+            <div className="auth-input-group">
+              <label className="auth-label">Email address</label>
               <input
                 type="email"
-                className="form-control input-dark"
-                placeholder="name@example.com"
+                className="auth-input"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                autoComplete="email"
               />
             </div>
-
-            <div className="mb-4">
-              <label className="form-label text-light">Password</label>
+            <div className="auth-input-group">
+              <label className="auth-label">Password</label>
               <input
                 type="password"
-                className="form-control input-dark"
+                className="auth-input"
                 placeholder="Min 8 chars, upper, lower, number, symbol"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
+                autoComplete="new-password"
               />
             </div>
-
-            <button
-              type="submit"
-              className="btn btn-login w-100 mb-3"
-              disabled={loading}
-            >
-              {loading ? "Creating account…" : "Sign Up"}
+            <button type="submit" className="auth-submit-btn" disabled={loading}>
+              <span>{loading ? "Creating account…" : "Create Account"}</span>
             </button>
           </form>
 
-          <p className="text-center text-secondary mb-0">
+          <p className="auth-footer-text">
             Already have an account?{" "}
-            <button
-              type="button"
-              className="btn btn-link p-0 text-decoration-none"
-              onClick={() => navigate("/")}
-            >
-              Log in
+            <button type="button" className="auth-link-btn" onClick={() => navigate("/")}>
+              Sign in
             </button>
           </p>
-
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

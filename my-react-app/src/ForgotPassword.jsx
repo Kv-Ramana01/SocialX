@@ -1,100 +1,164 @@
-// import React from "react";
-// import "./Login.css";
-
-// function ForgotPassword({ onBack }) {
-//   const handleReset = (e) => {
-//     e.preventDefault();
-//     alert("Reset link sent!");
-//     onBack(); // go back to login after submit
-//   };
-
-//   return (
-//     <div className="login-dark d-flex justify-content-center align-items-center vh-100 w-100">
-//       <div className="card login-card shadow-lg p-4">
-//         <div className="card-body">
-
-//           <h3 className="text-center text-white mb-3">
-//             Forgot Password
-//           </h3>
-
-//           <form onSubmit={handleReset}>
-//             <input
-//               type="email"
-//               className="form-control input-dark mb-3"
-//               placeholder="Enter your email"
-//               required
-//             />
-
-//             <button
-//               type="submit"
-//               className="btn btn-login w-100 mb-3"
-//             >
-//               Send Reset Link
-//             </button>
-//           </form>
-
-//           <button
-//             className="btn btn-link w-100 text-decoration-none"
-//             onClick={onBack}
-//           >
-//             Back to Login
-//           </button>
-
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default ForgotPassword;
-
-
-import React from "react";
+// src/ForgotPassword.jsx
+// Improved: Galaxy animation + verify user exists → let them reset password inline
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Login.css";
+import GalaxyCanvas from "./components/auth/GalaxyCanvas";
+import "../src/styles/auth-galaxy.css";
+
+const BASE_URL = "http://localhost:5000/api";
 
 function ForgotPassword() {
   const navigate = useNavigate();
+  const [step, setStep] = useState("verify"); // "verify" | "reset"
+  const [username, setUsername] = useState("");
+  const [email, setEmail]       = useState("");
+  const [newPw, setNewPw]       = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [error, setError]       = useState("");
+  const [success, setSuccess]   = useState("");
+  const [loading, setLoading]   = useState(false);
 
-  const handleReset = (e) => {
+  // Step 1: verify username + email combo
+  const handleVerify = async (e) => {
     e.preventDefault();
-    alert("Reset link sent!");
+    setError(""); setSuccess("");
+    if (!username.trim() || !email.trim()) return setError("Both fields are required.");
+    setLoading(true);
+    try {
+      const res  = await fetch(`${BASE_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), email: email.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Verification failed.");
+      if (data.verified) {
+        setStep("reset");
+        setSuccess("Identity verified! Set your new password below.");
+      } else {
+        setError("No account found with that username and email.");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // ✅ Redirect back to Login page
-    navigate("/");
+  // Step 2: actually reset password
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setError(""); setSuccess("");
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).{8,}$/;
+    if (!newPw || !confirmPw) return setError("Please fill in both password fields.");
+    if (newPw !== confirmPw) return setError("Passwords don't match.");
+    if (!regex.test(newPw)) return setError("Password needs 8+ chars, upper, lower, number & symbol.");
+    setLoading(true);
+    try {
+      const res  = await fetch(`${BASE_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), email: email.trim(), newPassword: newPw }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Reset failed.");
+      setSuccess("Password updated! Redirecting to login…");
+      setTimeout(() => navigate("/"), 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="login-dark d-flex justify-content-center align-items-center vh-100 w-100">
-      <div className="card login-card shadow-lg p-4">
-        <div className="card-body">
-          <h3 className="text-center text-white mb-3">
-            Forgot Password
-          </h3>
+    <>
+      <div className="auth-galaxy-bg">
+        <GalaxyCanvas />
+      </div>
+      <div className="auth-content-layer">
+        <div className="auth-glass-card">
+          <div className="auth-brand">SocialX</div>
+          <p className="auth-tagline">
+            {step === "verify" ? "Account Recovery 🔐" : "Set New Password 🔑"}
+          </p>
 
-          <form onSubmit={handleReset}>
-            <input
-              type="email"
-              className="form-control input-dark mb-3"
-              placeholder="Enter your email"
-              required
-            />
+          {error   && <div className="auth-error">{error}</div>}
+          {success && <div className="auth-success">{success}</div>}
 
-            <button type="submit" className="btn btn-login w-100 mb-3">
-              Send Reset Link
+          {step === "verify" ? (
+            <form onSubmit={handleVerify} noValidate>
+              <div className="auth-input-group">
+                <label className="auth-label">Username</label>
+                <input
+                  type="text"
+                  className="auth-input"
+                  placeholder="Your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <div className="auth-input-group">
+                <label className="auth-label">Email address</label>
+                <input
+                  type="email"
+                  className="auth-input"
+                  placeholder="Email linked to your account"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <button type="submit" className="auth-submit-btn" disabled={loading}>
+                <span>{loading ? "Verifying…" : "Verify Identity"}</span>
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleReset} noValidate>
+              <div className="auth-input-group">
+                <label className="auth-label">New Password</label>
+                <input
+                  type="password"
+                  className="auth-input"
+                  placeholder="Min 8 chars, upper, lower, number, symbol"
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  required
+                  disabled={loading}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="auth-input-group">
+                <label className="auth-label">Confirm New Password</label>
+                <input
+                  type="password"
+                  className="auth-input"
+                  placeholder="Repeat new password"
+                  value={confirmPw}
+                  onChange={(e) => setConfirmPw(e.target.value)}
+                  required
+                  disabled={loading}
+                  autoComplete="new-password"
+                />
+              </div>
+              <button type="submit" className="auth-submit-btn" disabled={loading}>
+                <span>{loading ? "Updating…" : "Update Password"}</span>
+              </button>
+            </form>
+          )}
+
+          <p className="auth-footer-text">
+            Remember it?{" "}
+            <button type="button" className="auth-link-btn" onClick={() => navigate("/")}>
+              Back to Login
             </button>
-          </form>
-
-          {/* ✅ Back to login */}
-          <button
-            className="btn btn-link w-100 text-decoration-none"
-            onClick={() => navigate("/")}
-          >
-            Back to Login
-          </button>
+          </p>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
