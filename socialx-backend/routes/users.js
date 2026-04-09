@@ -1,3 +1,5 @@
+// socialx-backend/routes/users.js
+// FIX: /profile and /password MUST come before /:id (otherwise Express matches "profile" as an ID)
 const express = require("express");
 const router = express.Router();
 const {
@@ -8,12 +10,14 @@ const {
 } = require("../controllers/userController");
 const { protect } = require("../middleware/auth");
 
-// All routes are protected
 router.use(protect);
 
+// Static routes FIRST
 router.get("/search", searchUsers);
-router.get("/:id", getUserProfile);
 router.put("/profile", updateProfile);
 router.put("/password", changePassword);
+
+// Dynamic route LAST
+router.get("/:id", getUserProfile);
 
 module.exports = router;

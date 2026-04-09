@@ -1,24 +1,23 @@
 // src/Login.jsx
+// UPGRADED: Galaxy animation, glassmorphism card, premium design
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Login.css";
+import GalaxyCanvas from "./components/auth/GalaxyCanvas";
+import "../src/styles/auth-galaxy.css";
 
 function Login({ onLogin }) {
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [error,    setError]    = useState("");
   const [loading,  setLoading]  = useState(false);
-
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      await onLogin(email, password); // App.jsx calls authAPI.login()
-      // Navigation handled by App.jsx redirect
+      await onLogin(email, password);
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");
     } finally {
@@ -27,79 +26,78 @@ function Login({ onLogin }) {
   };
 
   return (
-    <div className="login-dark d-flex justify-content-center align-items-center vh-100 w-100">
-      <div className="card login-card shadow-lg p-4">
-        <div className="card-body">
+    <>
+      {/* Galaxy background */}
+      <div className="auth-galaxy-bg">
+        <GalaxyCanvas />
+      </div>
 
-          <h2 className="text-center mb-4 text-white fw-bold">SocialX</h2>
-          <h5 className="text-center text-secondary mb-4">Welcome Back</h5>
+      {/* Card layer */}
+      <div className="auth-content-layer">
+        <div className="auth-glass-card">
+          {/* Brand */}
+          <div className="auth-brand">SocialX</div>
+          <p className="auth-tagline">Welcome back ✨</p>
 
-          {error && (
-            <div className="alert alert-danger py-2 text-center" style={{ fontSize: 14 }}>
-              {error}
-            </div>
-          )}
+          {error && <div className="auth-error">{error}</div>}
 
-          <form onSubmit={handleLogin}>
-            <div className="mb-3">
-              <label className="form-label text-light">Email address</label>
+          <form onSubmit={handleLogin} noValidate>
+            <div className="auth-input-group">
+              <label className="auth-label">Email address</label>
               <input
                 type="email"
-                className="form-control input-dark"
-                placeholder="name@example.com"
+                className="auth-input"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                autoComplete="email"
               />
             </div>
 
-            <div className="mb-2">
-              <label className="form-label text-light">Password</label>
+            <div className="auth-input-group">
+              <label className="auth-label">Password</label>
               <input
                 type="password"
-                className="form-control input-dark"
-                placeholder="Enter password"
+                className="auth-input"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
+                autoComplete="current-password"
               />
             </div>
 
-            <div className="text-end mb-3">
+            <div className="auth-forgot-link">
               <button
                 type="button"
-                className="btn btn-link p-0 text-decoration-none"
+                className="auth-link-btn"
                 onClick={() => navigate("/forgot")}
               >
                 Forgot password?
               </button>
             </div>
 
-            <button
-              type="submit"
-              className="btn btn-login w-100 py-2"
-              disabled={loading}
-            >
-              {loading ? "Logging in…" : "Log In"}
+            <button type="submit" className="auth-submit-btn" disabled={loading}>
+              <span>{loading ? "Signing in…" : "Sign In"}</span>
             </button>
           </form>
 
-          <p className="text-center text-secondary mt-3 mb-0">
+          <p className="auth-footer-text">
             Don't have an account?{" "}
             <button
               type="button"
-              className="btn btn-link p-0 text-decoration-none"
+              className="auth-link-btn"
               onClick={() => navigate("/signup")}
             >
-              Sign up
+              Create one
             </button>
           </p>
-
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

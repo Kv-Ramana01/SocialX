@@ -1,12 +1,15 @@
 // src/services/api.js
-// Central API service — all backend calls go through here
+// UPGRADED: Added notifications, post visibility, save, socket helper, cursor pagination
 
 const BASE_URL = "http://localhost:5000/api";
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+// ─── Token Helpers ────────────────────────────────────────────────────────────
+export const saveToken  = (token) => localStorage.setItem("token", token);
+export const clearToken = () => localStorage.removeItem("token");
+export const hasToken   = () => !!localStorage.getItem("token");
+export const getToken   = () => localStorage.getItem("token");
 
-const getToken = () => localStorage.getItem("token");
-
+// ─── Core Request Helper ──────────────────────────────────────────────────────
 const headers = (includeAuth = true) => {
   const h = { "Content-Type": "application/json" };
   if (includeAuth) {
@@ -17,24 +20,19 @@ const headers = (includeAuth = true) => {
 };
 
 const request = async (method, path, body = null, auth = true) => {
-  const options = {
-    method,
-    headers: headers(auth),
-  };
+  const options = { method, headers: headers(auth) };
   if (body) options.body = JSON.stringify(body);
 
   const res = await fetch(`${BASE_URL}${path}`, options);
   const data = await res.json();
 
   if (!res.ok) {
-    // Throw the server's message so components can display it
     throw new Error(data.message || "Something went wrong.");
   }
   return data;
 };
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
-
 export const authAPI = {
   register: (username, email, password) =>
     request("POST", "/auth/register", { username, email, password }, false),
@@ -51,16 +49,28 @@ export const authAPI = {
 };
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
-
 export const postsAPI = {
-  getFeed: () => request("GET", "/posts"),
+  // UPGRADED: cursor-based pagination for infinite scroll
+  getFeed: (cursor = null, limit = 15) => {
+    const params = new URLSearchParams({ limit });
+    if (cursor) params.append("cursor", cursor);
+    return request("GET", `/posts?${params}`);
+  },
 
-  createPost: (content, image = null) =>
-    request("POST", "/posts", { content, image }),
+  // UPGRADED: visibility parameter
+  createPost: (content, image = null, visibility = "public") =>
+    request("POST", "/posts", { content, image, visibility }),
 
   deletePost: (postId) => request("DELETE", `/posts/${postId}`),
 
   toggleLike: (postId) => request("PUT", `/posts/${postId}/like`),
+
+  // NEW: save/bookmark
+  toggleSave: (postId) => request("PUT", `/posts/${postId}/save`),
+
+  // NEW: update visibility
+  updateVisibility: (postId, visibility) =>
+    request("PUT", `/posts/${postId}/visibility`, { visibility }),
 
   addComment: (postId, text) =>
     request("POST", `/posts/${postId}/comments`, { text }),
@@ -69,7 +79,6 @@ export const postsAPI = {
 };
 
 // ─── Friends ──────────────────────────────────────────────────────────────────
-
 export const friendsAPI = {
   getFriends: () => request("GET", "/friends"),
 
@@ -87,18 +96,17 @@ export const friendsAPI = {
 };
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
-
 export const messagesAPI = {
   getChatList: () => request("GET", "/messages/chats"),
 
   getConversation: (userId) => request("GET", `/messages/${userId}`),
 
+  // NOTE: For real-time, use socket. This is REST fallback.
   sendMessage: (userId, text) =>
     request("POST", `/messages/${userId}`, { text }),
 };
 
 // ─── Users ────────────────────────────────────────────────────────────────────
-
 export const usersAPI = {
   search: (q) => request("GET", `/users/search?q=${encodeURIComponent(q)}`),
 
@@ -110,8 +118,15 @@ export const usersAPI = {
     request("PUT", "/users/password", { currentPassword, newPassword }),
 };
 
-// ─── Token helpers used by App.jsx ────────────────────────────────────────────
+// ─── Notifications ────────────────────────────────────────────────────────────
+export const notificationsAPI = {
+  getAll: (page = 1) => request("GET", `/notifications?page=${page}&limit=20`),
 
-export const saveToken = (token) => localStorage.setItem("token", token);
-export const clearToken = () => localStorage.removeItem("token");
-export const hasToken   = () => !!localStorage.getItem("token");
+  getUnreadCount: () => request("GET", "/notifications/unread-count"),
+
+  markAllRead: () => request("PUT", "/notifications/read"),
+
+  markOneRead: (id) => request("PUT", `/notifications/${id}/read`),
+
+  delete: (id) => request("DELETE", `/notifications/${id}`),
+};
