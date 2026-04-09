@@ -15,9 +15,12 @@ router.use(protect);
 
 router.get("/", getFeed);
 router.post("/", createPost);
+
+// FIX: /user/:userId MUST come before /:id — otherwise Express matches "user" as a post id
+router.get("/user/:userId", getUserPosts);
+
 router.delete("/:id", deletePost);
 router.put("/:id/like", toggleLike);
 router.post("/:id/comments", addComment);
-router.get("/user/:userId", getUserPosts);
 
 module.exports = router;

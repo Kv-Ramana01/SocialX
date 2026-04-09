@@ -1,10 +1,10 @@
 // src/Signup.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authAPI, saveToken } from "./services/api";
 import "./Login.css";
 
-function Signup() {
+// FIX: onSignup prop comes from App.jsx — handles token save + state update
+function Signup({ onSignup }) {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -17,7 +17,6 @@ function Signup() {
     e.preventDefault();
     setError("");
 
-    // Client-side validation (mirrors backend rules)
     const usernameRegex = /^[a-zA-Z0-9_]{3,15}$/;
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).{8,}$/;
 
@@ -32,9 +31,9 @@ function Signup() {
 
     setLoading(true);
     try {
-      const data = await authAPI.register(username, email, password);
-      saveToken(data.token);
-      navigate("/home");
+      // App.jsx handles saveToken + setCurrentUser + setIsLoggedIn
+      await onSignup(username, email, password);
+      // App state is now updated → the /signup route renders <Navigate to="/home" />
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");
     } finally {

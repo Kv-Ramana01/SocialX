@@ -2,23 +2,28 @@ const Post = require("../models/Post");
 const User = require("../models/User");
 
 // @route   GET /api/posts
-// @desc    Get all posts (feed) - own posts + friends posts
+// @desc    Global feed — ALL posts from ALL users (like Facebook/Twitter)
 // @access  Private
 const getFeed = async (req, res) => {
   try {
-    const currentUser = await User.findById(req.user._id);
-    const friendIds = currentUser.friends;
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip  = (page - 1) * limit;
 
-    // Get posts from self + friends, newest first
-    const posts = await Post.find({
-      author: { $in: [req.user._id, ...friendIds] },
-    })
-      .populate("author", "username name profilePic")
+    const posts = await Post.find({})
+      .populate("author", "username name profilePic isOnline")
       .populate("comments.user", "username name profilePic")
       .sort({ createdAt: -1 })
-      .limit(50);
+      .skip(skip)
+      .limit(limit);
 
-    res.status(200).json({ success: true, posts });
+    const total = await Post.countDocuments({});
+
+    res.status(200).json({
+      success: true,
+      posts,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     console.error("GetFeed error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -26,28 +31,27 @@ const getFeed = async (req, res) => {
 };
 
 // @route   POST /api/posts
-// @desc    Create a new post
+// @desc    Create a new post (supports base64 image stored in MongoDB)
 // @access  Private
 const createPost = async (req, res) => {
   try {
     const { content, image } = req.body;
 
     if (!content || !content.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Post content is required.",
-      });
+      return res.status(400).json({ success: false, message: "Post content is required." });
+    }
+
+    if (image && image.length > 7 * 1024 * 1024) {
+      return res.status(400).json({ success: false, message: "Image too large. Please use an image under 5MB." });
     }
 
     const post = await Post.create({
-      author: req.user._id,
+      author:  req.user._id,
       content: content.trim(),
-      image: image || null,
+      image:   image || null,
     });
 
-    // Populate author details before returning
     await post.populate("author", "username name profilePic");
-
     res.status(201).json({ success: true, post });
   } catch (error) {
     console.error("CreatePost error:", error);
@@ -56,23 +60,12 @@ const createPost = async (req, res) => {
 };
 
 // @route   DELETE /api/posts/:id
-// @desc    Delete a post (owner only)
-// @access  Private
 const deletePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-
-    if (!post) {
-      return res.status(404).json({ success: false, message: "Post not found." });
-    }
-
-    if (post.author.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to delete this post.",
-      });
-    }
-
+    if (!post) return res.status(404).json({ success: false, message: "Post not found." });
+    if (post.author.toString() !== req.user._id.toString())
+      return res.status(403).json({ success: false, message: "Not authorized." });
     await post.deleteOne();
     res.status(200).json({ success: true, message: "Post deleted." });
   } catch (error) {
@@ -82,17 +75,12 @@ const deletePost = async (req, res) => {
 };
 
 // @route   PUT /api/posts/:id/like
-// @desc    Like or unlike a post
-// @access  Private
 const toggleLike = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: "Post not found." });
 
-    if (!post) {
-      return res.status(404).json({ success: false, message: "Post not found." });
-    }
-
-    const userId = req.user._id;
+    const userId       = req.user._id;
     const alreadyLiked = post.likes.includes(userId);
 
     if (alreadyLiked) {
@@ -103,13 +91,7 @@ const toggleLike = async (req, res) => {
 
     await post.save();
     await post.populate("author", "username name profilePic");
-
-    res.status(200).json({
-      success: true,
-      liked: !alreadyLiked,
-      likeCount: post.likes.length,
-      post,
-    });
+    res.status(200).json({ success: true, liked: !alreadyLiked, likeCount: post.likes.length, post });
   } catch (error) {
     console.error("ToggleLike error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -117,24 +99,14 @@ const toggleLike = async (req, res) => {
 };
 
 // @route   POST /api/posts/:id/comments
-// @desc    Add a comment to a post
-// @access  Private
 const addComment = async (req, res) => {
   try {
     const { text } = req.body;
-
-    if (!text || !text.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment text is required.",
-      });
-    }
+    if (!text || !text.trim())
+      return res.status(400).json({ success: false, message: "Comment text is required." });
 
     const post = await Post.findById(req.params.id);
-
-    if (!post) {
-      return res.status(404).json({ success: false, message: "Post not found." });
-    }
+    if (!post) return res.status(404).json({ success: false, message: "Post not found." });
 
     post.comments.push({ user: req.user._id, text: text.trim() });
     await post.save();
@@ -149,14 +121,11 @@ const addComment = async (req, res) => {
 };
 
 // @route   GET /api/posts/user/:userId
-// @desc    Get all posts by a specific user
-// @access  Private
 const getUserPosts = async (req, res) => {
   try {
     const posts = await Post.find({ author: req.params.userId })
       .populate("author", "username name profilePic")
       .sort({ createdAt: -1 });
-
     res.status(200).json({ success: true, posts });
   } catch (error) {
     console.error("GetUserPosts error:", error);

@@ -17,23 +17,19 @@ function Friends({ currentUser }) {
   const [previewImage,   setPreviewImage]   = useState(null);
   const [loading,        setLoading]        = useState(true);
 
-  // Load data whenever section changes
   useEffect(() => {
     setLoading(true);
-
     const loaders = {
       requests:    () => friendsAPI.getRequests().then((d) => setRequests(d.requests)),
       suggestions: () => friendsAPI.getSuggestions().then((d) => setSuggestions(d.suggestions)),
       all:         () => friendsAPI.getFriends().then((d) => setFriends(d.friends)),
       birthdays:   () => friendsAPI.getFriends().then((d) => setFriends(d.friends)),
     };
-
     loaders[activeSection]?.()
       .catch((err) => console.error("Friends load error:", err))
       .finally(() => setLoading(false));
   }, [activeSection]);
 
-  // Close settings dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target))
@@ -43,47 +39,41 @@ function Friends({ currentUser }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Escape to close preview
   useEffect(() => {
     const handler = (e) => e.key === "Escape" && setPreviewImage(null);
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
-
   const acceptRequest = async (req) => {
     try {
       await friendsAPI.acceptRequest(req.from._id);
       setRequests((prev) => prev.filter((r) => r.from._id !== req.from._id));
       setFriends((prev) => [...prev, req.from]);
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   };
 
   const declineRequest = async (req) => {
     try {
       await friendsAPI.declineRequest(req.from._id);
       setRequests((prev) => prev.filter((r) => r.from._id !== req.from._id));
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   };
 
   const addFriend = async (user) => {
     try {
       await friendsAPI.sendRequest(user._id);
       setSuggestions((prev) => prev.filter((s) => s._id !== user._id));
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   };
 
   const removeSuggestion = (userId) =>
     setSuggestions((prev) => prev.filter((s) => s._id !== userId));
 
-  const openPreview = (avatarUrl) => setPreviewImage(avatarUrl);
+  // ── NEW: go to chat with this friend ────────────────────────────────────────
+  const chatWithFriend = (friendId) => {
+    navigate("/chat", { state: { openUserId: friendId } });
+  };
 
   const getInitials = (user) => {
     const name = user?.name || user?.username || "?";
@@ -94,12 +84,13 @@ function Friends({ currentUser }) {
     (f.name || f.username || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const todayBirthdays    = friends.filter((f) => {
+  const todayBirthdays = friends.filter((f) => {
     if (!f.birthday) return false;
     const b = new Date(f.birthday);
     const n = new Date();
     return b.getMonth() === n.getMonth() && b.getDate() === n.getDate();
   });
+
   const upcomingBirthdays = friends.filter((f) => {
     if (!f.birthday) return false;
     const b = new Date(f.birthday);
@@ -115,41 +106,21 @@ function Friends({ currentUser }) {
         <div className="sidebar-header">
           <h3>Friends</h3>
           <div className="settings-container" ref={dropdownRef}>
-            <span
-              className="settings-icon"
-              onClick={() => setShowSettings((p) => !p)}
-              title="Settings"
-            >
-              ⚙
-            </span>
+            <span className="settings-icon" onClick={() => setShowSettings((p) => !p)} title="Settings">⚙</span>
             {showSettings && (
               <div className="settings-dropdown">
-                <div onClick={() => { alert("Privacy Settings"); setShowSettings(false); }}>
-                  Privacy Settings
-                </div>
-                <div onClick={() => { alert("Notifications"); setShowSettings(false); }}>
-                  Notification Settings
-                </div>
-                <div onClick={() => { alert("Blocked Users"); setShowSettings(false); }}>
-                  Blocked Users
-                </div>
+                <div onClick={() => { navigate("/settings"); setShowSettings(false); }}>Privacy Settings</div>
+                <div onClick={() => { navigate("/settings"); setShowSettings(false); }}>Notification Settings</div>
+                <div onClick={() => { navigate("/settings"); setShowSettings(false); }}>Blocked Users</div>
               </div>
             )}
           </div>
         </div>
-
         <ul>
-          <li className="home-item" onClick={() => navigate("/home")}>Home</li>
+          <li className="home-item" onClick={() => navigate("/home")}>🏠 Home</li>
           {["requests", "suggestions", "all", "birthdays"].map((s) => (
-            <li
-              key={s}
-              className={activeSection === s ? "active" : ""}
-              onClick={() => setActiveSection(s)}
-            >
-              {s === "requests"    ? "Friend Requests" :
-               s === "suggestions" ? "Suggestions" :
-               s === "all"         ? "All Friends" :
-               "Birthdays"}
+            <li key={s} className={activeSection === s ? "active" : ""} onClick={() => setActiveSection(s)}>
+              {s === "requests" ? "Friend Requests" : s === "suggestions" ? "Suggestions" : s === "all" ? "All Friends" : "Birthdays"}
             </li>
           ))}
         </ul>
@@ -169,7 +140,7 @@ function Friends({ currentUser }) {
                   <img
                     src={req.from.profilePic || `https://ui-avatars.com/api/?name=${req.from.username}&background=6c5ce7&color=fff`}
                     alt={req.from.username}
-                    onClick={() => openPreview(req.from.profilePic)}
+                    onClick={() => setPreviewImage(req.from.profilePic)}
                   />
                   <h4>{req.from.name || req.from.username}</h4>
                   <p>@{req.from.username}</p>
@@ -192,7 +163,7 @@ function Friends({ currentUser }) {
                   <img
                     src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`}
                     alt={user.username}
-                    onClick={() => openPreview(user.profilePic)}
+                    onClick={() => setPreviewImage(user.profilePic)}
                   />
                   <h4>{user.name || user.username}</h4>
                   <p>@{user.username}</p>
@@ -204,7 +175,7 @@ function Friends({ currentUser }) {
           </section>
         )}
 
-        {/* All Friends */}
+        {/* All Friends — now with Message button */}
         {!loading && activeSection === "all" && (
           <section>
             <h2>All Friends ({friends.length})</h2>
@@ -215,19 +186,19 @@ function Friends({ currentUser }) {
               onChange={(e) => setSearch(e.target.value)}
             />
             {filteredFriends.length === 0 && (
-              <p style={{ color: "#aaa" }}>
-                {friends.length === 0 ? "No friends yet." : "No friends match your search."}
-              </p>
+              <p style={{ color: "#aaa" }}>{friends.length === 0 ? "No friends yet." : "No friends match your search."}</p>
             )}
             {filteredFriends.map((user) => (
               <div className="friend-row" key={user._id}>
                 <img
                   src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`}
                   alt={user.username}
-                  onClick={() => openPreview(user.profilePic)}
+                  onClick={() => setPreviewImage(user.profilePic)}
                 />
                 <span>{user.name || user.username}</span>
-                <button className="btn-secondary">Friends</button>
+                {/* NEW: Message button → opens chat with this friend */}
+                <button className="btn-primary" onClick={() => chatWithFriend(user._id)}>💬 Message</button>
+                <button className="btn-secondary">Friends ✓</button>
               </div>
             ))}
           </section>
@@ -244,7 +215,7 @@ function Friends({ currentUser }) {
                   <div className="friend-row" key={user._id}>
                     <img src={user.profilePic || `https://ui-avatars.com/api/?name=${user.username}&background=6c5ce7&color=fff`} alt={user.username} />
                     <span>{user.name || user.username}</span>
-                    <button className="btn-primary">Wish 🎂</button>
+                    <button className="btn-primary" onClick={() => chatWithFriend(user._id)}>Wish 🎂</button>
                   </div>
                 ))}
               </>

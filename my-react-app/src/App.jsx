@@ -4,19 +4,19 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import { authAPI, saveToken, clearToken, hasToken } from "./services/api";
 
-import Login         from "./Login";
-import Signup        from "./Signup";
+import Login          from "./Login";
+import Signup         from "./Signup";
 import ForgotPassword from "./ForgotPassword";
-import SocialHome    from "./pages/SocialHome";
-import Friends       from "./pages/Friends";
-import Chat          from "./pages/Chat";
-import Profile       from "./pages/Profile";
-import Settings      from "./pages/Settings";
+import SocialHome     from "./pages/SocialHome";
+import Friends        from "./pages/Friends";
+import Chat           from "./pages/Chat";
+import Profile        from "./pages/Profile";
+import Settings       from "./pages/Settings";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(hasToken());
   const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading]   = useState(hasToken()); // only show loader if token exists
+  const [loading, setLoading] = useState(hasToken());
 
   // Re-validate token on first load
   useEffect(() => {
@@ -29,7 +29,6 @@ function App() {
         setIsLoggedIn(true);
       })
       .catch(() => {
-        // Token expired / invalid
         clearToken();
         setIsLoggedIn(false);
       })
@@ -37,7 +36,16 @@ function App() {
   }, []);
 
   const handleLogin = async (email, password) => {
-    const data = await authAPI.login(email, password); // throws on error
+    const data = await authAPI.login(email, password);
+    saveToken(data.token);
+    setCurrentUser(data.user);
+    setIsLoggedIn(true);
+  };
+
+  // FIX: Signup handler — same as login but calls register endpoint
+  // Signup.jsx receives this so App state updates without a page reload
+  const handleSignup = async (username, email, password) => {
+    const data = await authAPI.register(username, email, password);
     saveToken(data.token);
     setCurrentUser(data.user);
     setIsLoggedIn(true);
@@ -86,8 +94,18 @@ function App() {
           )
         }
       />
-      <Route path="/signup"  element={<Signup />} />
-      <Route path="/forgot"  element={<ForgotPassword />} />
+      {/* FIX: Pass onSignup so Signup can update App state */}
+      <Route
+        path="/signup"
+        element={
+          isLoggedIn ? (
+            <Navigate to="/home" />
+          ) : (
+            <Signup onSignup={handleSignup} />
+          )
+        }
+      />
+      <Route path="/forgot" element={<ForgotPassword />} />
 
       {/* Protected */}
       <Route
@@ -120,7 +138,7 @@ function App() {
       />
       <Route
         path="/settings"
-        element={isLoggedIn ? <Settings currentUser={currentUser} /> : <Navigate to="/" />}
+        element={isLoggedIn ? <Settings currentUser={currentUser} setCurrentUser={setCurrentUser} /> : <Navigate to="/" />}
       />
 
       {/* Fallback */}
