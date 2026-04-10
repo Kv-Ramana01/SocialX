@@ -127,3 +127,5 @@ export default function GalaxyCanvas() {
     />
   );
 }
+
+// i think the project is almost completed, but in settings it says you will see a toggle button to change visibility but its not present also in post near uploading image option there are two more option which is feeling and location they dont do anything so maybe complete them as well and see if there are any other issues in the project.

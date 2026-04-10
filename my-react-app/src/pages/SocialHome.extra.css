@@ -369,6 +369,23 @@
   display: flex; align-items: center; justify-content: center; padding: 20px;
   animation: sx-fade-in 0.2s ease;
 }
+
+.sx-visibility-select {
+  background: var(--sx-surface2);
+  border: 1px solid var(--sx-border);
+  color: var(--sx-text2);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.sx-visibility-select:focus {
+  border-color: var(--sx-accent);
+}
+
 .sx-modal {
   width: 100%; max-width: 480px; max-height: 90vh;
   background: var(--sx-surface); border: 1px solid var(--sx-border2);
